@@ -22,10 +22,12 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] Suavização separada de posição (follow_speed) e zoom (zoom_speed)
 - [ ] **VALIDAR:** andar com o azul e sentir a câmera abrir/fechar; ajustar constantes
 
-## Fase 3 — Join local + spawn por device  [ ]
-- [ ] Detectar "aperte para entrar" por controle/teclado (`_unhandled_input`)
-- [ ] PlayerManager registra device → slot → cor e spawna
-- [ ] Remover o atalho DEBUG_ANY
+## Fase 3 — Join local + spawn por device  [x] (aguardando validação)
+- [x] Lobby (cena principal): join por device em `_input` (A/B/Start · Enter/Esc/Espaço)
+- [x] PlayerManager registra device → slot → cor (sinais join/left, persiste)
+- [x] GameManager.start_match troca Lobby → Arena; Arena spawna por device
+- [x] Removido o DEBUG_ANY; fallback de teclado ao abrir a Arena direto
+- [ ] **VALIDAR:** entrar com teclado e controle(s), começar, e cada um mover o seu boneco
 
 ## Fase 4 — Pegar / carregar / interagir  [ ]
 - [ ] `Interactable` base + itens pegáveis (reparent p/ "mão")
@@ -40,5 +42,6 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 
 ---
 ### Status atual
-Fase 0 e 1 implementadas. **Próximo passo:** o usuário roda na Godot para validar
-o movimento/câmera e dá feedback (feel, velocidade, ângulo). Depois, Fase 2/3.
+Fases 0–3 implementadas (join local + spawn por device). Temática escolhida:
+"Escape the Island" (ver GDD), mecânicas ainda não desenhadas. **Próximo passo:**
+validar o join/movimento com teclado + controle(s); depois, Fase 4 (pegar/interagir).

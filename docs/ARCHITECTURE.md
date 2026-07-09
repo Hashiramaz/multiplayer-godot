@@ -14,7 +14,23 @@ Engine: **Godot 4.7**, Forward+, física **Jolt**. Linguagem: **GDScript** (TAB)
 | ScriptableObject | `Resource` (`.tres`) |
 | Tags/Layers | Grupos (`add_to_group`) e collision layers |
 
-## Árvore de cena (atual)
+## Fluxo de cenas
+`Lobby.tscn` (cena principal) → jogadores dão join por device → **Start** chama
+`GameManager.start_match()` → troca para `Arena.tscn`, que lê
+`PlayerManager.registered_devices` e spawna um jogador por device. Abrir a Arena
+direto (sem ninguém registrado) cai num fallback de 1 jogador de teclado.
+
+## Árvore de cena — Lobby
+```
+Lobby (Control, lobby.gd)
+├─ Bg (ColorRect)
+└─ VBox
+   ├─ Title / Instructions (Label)
+   └─ Slots (HBoxContainer)   # 4 painéis de slot criados por código
+```
+Join lido em `_input` por device: gamepad A/B/Start, teclado Enter/Esc/Espaço.
+
+## Árvore de cena — Arena
 ```
 Arena (Node3D, arena.gd)
 ├─ WorldEnvironment        # céu procedural + luz ambiente
@@ -33,8 +49,9 @@ independentes na mesma máquina, cada jogador possui um `PlayerInput`
 (`scripts/input/player_input.gd`) amarrado a **um device**:
 - `device >= 0` → aquele gamepad (lê eixos via `Input.get_joy_axis(device, ...)`).
 - `device == -1` → teclado.
-- `device == -2` (**DEBUG_ANY**) → teclado + todos os pads juntos; só para
-  prototipar solo antes da tela de join (Fase 3). É o modo usado hoje na Arena.
+- `device == -99` (**NONE**) → não lê nada (placeholder / ainda sem device).
+
+(O antigo `DEBUG_ANY` foi removido na Fase 3, quando o join real passou a existir.)
 
 `get_move()` devolve `Vector2` (x = direita, y negativo = "pra cima"), unificando
 teclado e analógico. **Toda entrada do jogador passa por aqui** — é também a
@@ -55,9 +72,11 @@ Roda em `_process`. Calcula o **centroide** dos nós do grupo `"players"`, mede 
 `lerp` para suavizar. Um jogador → segue; vários → enquadra todos.
 
 ## Autoloads
-- `GameManager` — estado global (enum BOOT/MENU/LOBBY/PLAYING/PAUSED). Esqueleto.
-- `PlayerManager` — devices registrados + cores por slot. Esqueleto; recebe a
-  lógica de join/spawn na Fase 3.
+- `GameManager` — estado global (enum BOOT/MENU/LOBBY/PLAYING/PAUSED) + flow de
+  cena (`start_match`, `return_to_lobby`).
+- `PlayerManager` — **fonte da verdade** do roster: `registered_devices`
+  (device→slot em ordem de join), cores por slot, `join/leave` + sinais
+  `player_joined/player_left`. Persiste na troca de cena.
 
 ## Preparado para online (sem implementar agora)
 - Input isolado por device → trocável por input de rede.

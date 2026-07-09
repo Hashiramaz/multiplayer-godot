@@ -20,8 +20,10 @@ está fechada (candidatas no GDD); o foco atual é o protótipo de mecânicas.
 
 ## Como rodar
 Abrir o projeto na Godot 4.7 e apertar Play (F5). Cena principal atual:
-`scenes/arena/Arena.tscn` — spawna 1 jogador "debug" controlável por **teclado
-(WASD/setas) e/ou qualquer controle**, para testar movimento solo.
+`scenes/lobby/Lobby.tscn` — tela de **join local**: cada dispositivo entra sozinho
+(**A/Enter** entra, **B/Esc** sai, **Start/Espaço** começa). Ao começar, troca para
+`scenes/arena/Arena.tscn`, que spawna um jogador por device registrado (movimento
+com analógico/WASD). Abrir a Arena direto cai num fallback de 1 jogador de teclado.
 
 ## Estrutura
 ```

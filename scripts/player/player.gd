@@ -9,7 +9,7 @@ extends CharacterBody3D
 
 const GRAVITY: float = 20.0
 
-var device: int = PlayerInput.DEVICE_DEBUG_ANY
+var device: int = PlayerInput.DEVICE_NONE
 var _input: PlayerInput
 
 @onready var pivot: Node3D = $Pivot
