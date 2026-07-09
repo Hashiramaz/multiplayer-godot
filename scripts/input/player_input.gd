@@ -12,6 +12,7 @@ extends RefCounted
 
 const DEVICE_KEYBOARD: int = -1
 const DEVICE_DEBUG_ANY: int = -2
+const DEVICE_NONE: int = -99 ## Reads nothing; a stationary/AI-less placeholder player.
 const DEADZONE: float = 0.2
 
 var device: int = DEVICE_DEBUG_ANY
@@ -24,6 +25,8 @@ func _init(p_device: int = DEVICE_DEBUG_ANY) -> void:
 func get_move() -> Vector2:
 	var v := Vector2.ZERO
 	match device:
+		DEVICE_NONE:
+			return Vector2.ZERO
 		DEVICE_DEBUG_ANY:
 			v = _keyboard_vector() + _all_pads_vector()
 		DEVICE_KEYBOARD:

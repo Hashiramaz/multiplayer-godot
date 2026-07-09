@@ -20,12 +20,28 @@ jogadores. Loop agnóstico de temática — prototipado com primitivas.
 Uma câmera compartilhada que enquadra todos. Aproxima quando juntos, afasta quando
 se espalham. Ninguém sai da tela — isso incentiva o grupo a andar junto.
 
-## Candidatas de temática (decidir quando a mecânica estiver gostosa)
-1. **Oficina de reparo espacial** 🚀 — consertar vazamentos/energia numa nave em pane;
-   perigos dinâmicos (fogo, descompressão).
-2. **Ateliê de poções / alquimia** 🧪 — colher ingredientes, usar caldeirões, entregar poções.
-3. **Fábrica de robôs / linha de montagem** 🤖 — montar/encaixar peças numa esteira.
-4. **Abrigo de bichos caótico** 🐾 — carregar animais que fogem sozinhos até os cercados.
+## Temática — direção escolhida: "Escape the Island" 🏝️
+> Direção definida pelo desenvolvedor; **mecânicas ainda NÃO desenhadas** e o plano
+> técnico atual (protótipo com primitivas) segue inalterado. Isto é só o norte
+> criativo para, mais adiante, desenharmos mecânicas coerentes com ele.
+
+**Premissa:** 1–4 jogadores presos numa ilha precisam **cooperar para escapar**
+antes que uma ameaça crescente os alcance. A ideia central é **coletar recursos e
+construir uma embarcação** (ex.: uma jangada/barco) sob pressão de tempo.
+
+**Ameaça / relógio (a decidir — ainda em aberto):**
+- **Vulcão** entrando em erupção (lava avançando, tremores, queda de detritos), ou
+- **Ilha alagando** (maré/água subindo que reduz a área jogável).
+Ambas dão o "timer com tensão crescente" que combina com o core loop cooperativo.
+
+**Ganchos que a temática abre (para pensarmos em mecânicas depois, não agora):**
+- Recursos espalhados (madeira, corda, velas...) → transportar até um ponto de construção.
+- Uma "estação" central = o barco em construção, que evolui por etapas.
+- Perigos dinâmicos do ambiente (lava/água) forçando rotas e coordenação.
+- Possível terreno que muda com o tempo (área encolhendo), reforçando a câmera compartilhada.
+
+### Alternativas consideradas (arquivadas)
+- Oficina de reparo espacial 🚀 · Ateliê de poções 🧪 · Fábrica de robôs 🤖 · Abrigo de bichos 🐾
 
 ## Fora de escopo por agora
 - Online/rede (previsto, não travado — ver ARCHITECTURE).

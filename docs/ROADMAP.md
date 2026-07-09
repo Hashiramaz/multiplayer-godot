@@ -15,9 +15,12 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] Arena com chão, obstáculo, spawns; spawna 1 jogador debug
 - [ ] **VALIDAR:** abrir na Godot, apertar Play, andar com controle e teclado
 
-## Fase 2 — Câmera compartilhada com vários players  [ ]
-- [ ] Spawnar 2+ jogadores de teste e afinar enquadramento/zoom dinâmico
-- [ ] Limites de câmera / margem de tela / suavização fina
+## Fase 2 — Câmera compartilhada com vários players  [x] (aguardando validação de feel)
+- [x] Arena spawna N jogadores (`debug_player_count`); slot 0 dirigível, resto parado (DEVICE_NONE) como referência
+- [x] Câmera com enquadramento por FOV (distância = raio/tan(fov/2) * margem)
+- [x] Ângulo desacoplado (pitch/yaw em graus) da distância (zoom)
+- [x] Suavização separada de posição (follow_speed) e zoom (zoom_speed)
+- [ ] **VALIDAR:** andar com o azul e sentir a câmera abrir/fechar; ajustar constantes
 
 ## Fase 3 — Join local + spawn por device  [ ]
 - [ ] Detectar "aperte para entrar" por controle/teclado (`_unhandled_input`)
