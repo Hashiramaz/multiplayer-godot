@@ -26,6 +26,13 @@ analógico/WASD, **A/E** pega/entrega tora no barco). Na Arena, **Start/Esc** = 
 (Continuar / Voltar ao Lobby / Menu principal). Menus navegáveis por controle e teclado.
 Abrir a Arena direto cai num fallback de 1 jogador de teclado.
 
+## Como gerar build (Windows)
+Preset `export_presets.cfg` → **Windows Desktop**, saída em `build/windows/EscapeTheIsland.exe`
+(pasta `build/` é gitignored). Requer os **export templates da 4.7 instalados**
+(Editor → Gerenciar Modelos de Exportação). Pelo editor: Projeto → Exportar →
+Exportar Projeto. Ou via CLI headless (com o editor fechado):
+`Godot_..._console.exe --headless --path <projeto> --export-release "Windows Desktop" build/windows/EscapeTheIsland.exe`.
+
 ## Estrutura
 ```
 autoload/   game_manager.gd, player_manager.gd   (singletons globais)
