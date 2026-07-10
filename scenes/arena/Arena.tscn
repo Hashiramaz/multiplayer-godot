@@ -1,14 +1,14 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene format=3 uid="uid://chjyxevempp4r"]
 
-[ext_resource type="Script" path="res://scripts/arena/arena.gd" id="arena"]
-[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
-[ext_resource type="Script" path="res://scripts/camera/camera_rig.gd" id="cam"]
+[ext_resource type="Script" uid="uid://0vmitq0pxrw3" path="res://scripts/arena/arena.gd" id="arena"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
+[ext_resource type="Script" uid="uid://bfd6n20s3xl5e" path="res://scripts/camera/camera_rig.gd" id="cam"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/Carriable.tscn" id="log"]
-[ext_resource type="PackedScene" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
-[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
-[ext_resource type="Shader" path="res://Assets/Visual/Shaders/posterize_outline.gdshader" id="pp_shader"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
+[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
+[ext_resource type="Shader" uid="uid://bvjloitb18o42" path="res://Assets/Shaders/posterize_outline.gdshader" id="pp_shader"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 
@@ -24,7 +24,6 @@ tonemap_mode = 2
 tonemap_white = 1.2
 ssao_enabled = true
 ssao_intensity = 2.5
-ssao_radius = 1.0
 adjustment_enabled = true
 adjustment_contrast = 1.08
 adjustment_saturation = 1.15
@@ -52,6 +51,7 @@ flip_faces = true
 size = Vector2(2, 2)
 
 [sub_resource type="ShaderMaterial" id="pp_mat"]
+render_priority = 0
 shader = ExtResource("pp_shader")
 shader_parameter/zNear = 0.05
 shader_parameter/zFar = 100.0
@@ -61,97 +61,105 @@ shader_parameter/outline_thickness = 1.5
 shader_parameter/enable_color_limit = true
 shader_parameter/color_levels = 8
 shader_parameter/enable_color_palette = true
+shader_parameter/color1 = Color(1, 0.925, 0.839, 1)
+shader_parameter/color2 = Color(1, 0.831, 0.639, 1)
+shader_parameter/color3 = Color(1, 0.667, 0.369, 1)
+shader_parameter/color4 = Color(0.816, 0.506, 0.349, 1)
+shader_parameter/color5 = Color(0.553, 0.412, 0.478, 1)
+shader_parameter/color6 = Color(0.329, 0.306, 0.408, 1)
+shader_parameter/color7 = Color(0.125, 0.236, 0.337, 1)
+shader_parameter/color8 = Color(0.05, 0.169, 0.271, 1)
 shader_parameter/enable_dithering = true
 shader_parameter/dither_strength = 0.15
 
-[node name="Arena" type="Node3D"]
+[node name="Arena" type="Node3D" unique_id=352569236]
 script = ExtResource("arena")
 player_scene = ExtResource("player_scene")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1426221936]
 environment = SubResource("env")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1234020707]
 transform = Transform3D(0.906, -0.24, 0.348, 0, 0.823, 0.568, -0.423, -0.515, 0.746, 0, 12, 0)
 light_color = Color(1, 0.957, 0.882, 1)
 light_energy = 1.35
-shadow_enabled = true
 light_angular_distance = 1.5
+shadow_enabled = true
 
-[node name="Floor" type="StaticBody3D" parent="."]
+[node name="Floor" type="StaticBody3D" parent="." unique_id=709559182]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 
-[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+[node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=835095901]
 mesh = SubResource("floor_mesh")
 surface_material_override/0 = SubResource("floor_mat")
 
-[node name="Collision" type="CollisionShape3D" parent="Floor"]
+[node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=214357602]
 shape = SubResource("floor_shape")
 
-[node name="Obstacle" type="StaticBody3D" parent="."]
+[node name="Obstacle" type="StaticBody3D" parent="." unique_id=1762303042]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.5, 0)
 
-[node name="Mesh" type="MeshInstance3D" parent="Obstacle"]
+[node name="Mesh" type="MeshInstance3D" parent="Obstacle" unique_id=462423361]
 mesh = SubResource("obs_mesh")
 surface_material_override/0 = SubResource("obs_mat")
 
-[node name="Collision" type="CollisionShape3D" parent="Obstacle"]
+[node name="Collision" type="CollisionShape3D" parent="Obstacle" unique_id=135389705]
 shape = SubResource("obs_shape")
 
-[node name="SpawnPoints" type="Node3D" parent="."]
+[node name="SpawnPoints" type="Node3D" parent="." unique_id=1285029624]
 
-[node name="Spawn1" type="Marker3D" parent="SpawnPoints"]
+[node name="Spawn1" type="Marker3D" parent="SpawnPoints" unique_id=88858753]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.3, -2)
 
-[node name="Spawn2" type="Marker3D" parent="SpawnPoints"]
+[node name="Spawn2" type="Marker3D" parent="SpawnPoints" unique_id=809256096]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, -2)
 
-[node name="Spawn3" type="Marker3D" parent="SpawnPoints"]
+[node name="Spawn3" type="Marker3D" parent="SpawnPoints" unique_id=403719863]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.3, 2)
 
-[node name="Spawn4" type="Marker3D" parent="SpawnPoints"]
+[node name="Spawn4" type="Marker3D" parent="SpawnPoints" unique_id=1379563383]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, 2)
 
-[node name="Interactables" type="Node3D" parent="."]
+[node name="Interactables" type="Node3D" parent="." unique_id=368089740]
 
-[node name="Boat" parent="Interactables" instance=ExtResource("boat")]
+[node name="Boat" parent="Interactables" unique_id=671825567 instance=ExtResource("boat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9)
 
-[node name="Sawmill" parent="Interactables" instance=ExtResource("sawmill")]
+[node name="Sawmill" parent="Interactables" unique_id=365634286 instance=ExtResource("sawmill")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
-[node name="Log1" parent="Interactables" instance=ExtResource("log")]
+[node name="Log1" parent="Interactables" unique_id=1418720725 instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.25, -3)
 
-[node name="Log2" parent="Interactables" instance=ExtResource("log")]
+[node name="Log2" parent="Interactables" unique_id=1447245426 instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.25, -3)
 
-[node name="Log3" parent="Interactables" instance=ExtResource("log")]
+[node name="Log3" parent="Interactables" unique_id=437623961 instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.25, 3)
 
-[node name="Log4" parent="Interactables" instance=ExtResource("log")]
+[node name="Log4" parent="Interactables" unique_id=304567942 instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.25, 3)
 
-[node name="Log5" parent="Interactables" instance=ExtResource("log")]
+[node name="Log5" parent="Interactables" unique_id=1792895884 instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -6)
 
-[node name="Players" type="Node3D" parent="."]
+[node name="Players" type="Node3D" parent="." unique_id=1696881897]
 
-[node name="CameraRig" type="Node3D" parent="."]
+[node name="CameraRig" type="Node3D" parent="." unique_id=1041154504]
 script = ExtResource("cam")
 camera_path = NodePath("Camera3D")
 
-[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+[node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=459463414]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 12, 12)
 fov = 45.0
 
-[node name="PostProcess" type="MeshInstance3D" parent="CameraRig/Camera3D"]
+[node name="PostProcess" type="MeshInstance3D" parent="CameraRig/Camera3D" unique_id=1897753922]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
-extra_cull_margin = 16384.0
 cast_shadow = 0
+extra_cull_margin = 16384.0
 mesh = SubResource("pp_quad")
 surface_material_override/0 = SubResource("pp_mat")
 
-[node name="PauseMenu" parent="." instance=ExtResource("pause")]
+[node name="PauseMenu" parent="." unique_id=1416911999 instance=ExtResource("pause")]
 
-[node name="MatchUI" parent="." instance=ExtResource("match")]
+[node name="MatchUI" parent="." unique_id=1913517077 instance=ExtResource("match")]
