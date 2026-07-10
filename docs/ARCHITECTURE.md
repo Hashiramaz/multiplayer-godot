@@ -131,12 +131,14 @@ Quando/se formos para rede: Godot tem `MultiplayerAPI` +
   (`set_color` só guarda `player_color` por enquanto).
 - **Iluminação:** sol quente com sombra suave (`light_angular_distance`), ambiente
   com **SSAO** e leve ajuste de contraste/saturação. Alimenta o pós-processo abaixo.
-- **Pós-processo (estilização):** `Assets/Visual/Shaders/posterize_outline.gdshader`
+- **Pós-processo (estilização):** `Assets/Shaders/posterize_outline.gdshader`
   (spatial `unshaded`, lê depth/normal/screen — exige **Forward+**). Aplicado num
   `QuadMesh` de tela cheia (`flip_faces`, `extra_cull_margin` alto) filho do
   `Camera3D` (`CameraRig/Camera3D/PostProcess`). Faz outline (Sobel em depth+normal),
   posterização, mapeamento pra paleta de 8 cores e dithering — tudo em uniforms
   ajustáveis no material. Fonte: godotshaders.com.
+  ⚠️ Usa `render_mode ... depth_draw_never` — sem isso o quad escreve profundidade e
+  **oculta os `Label3D`** (texto "Serraria"/"Barco") desenhados no passe transparente.
 
 ## Decisões e pendências
 - Câmera **perspectiva** (não ortográfica) — mais natural/Overcooked. Trocável.

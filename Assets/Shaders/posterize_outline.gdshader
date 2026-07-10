@@ -1,5 +1,7 @@
 shader_type spatial;
-render_mode unshaded;
+// depth_draw_never: the fullscreen quad must NOT write depth, otherwise it
+// occludes transparent objects drawn afterwards (Label3D text disappeared).
+render_mode unshaded, depth_draw_never;
 
 uniform sampler2D DEPTH_TEXTURE : source_color, hint_depth_texture, filter_linear_mipmap;
 uniform sampler2D NORMAL_TEXTURE : hint_normal_roughness_texture, filter_nearest;

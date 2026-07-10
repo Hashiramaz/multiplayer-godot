@@ -13,10 +13,13 @@ var _timer: float = 0.0
 
 @onready var _output: Node3D = $Output
 @onready var _label: Label3D = $Label
+@onready var _progress_bar: Node3D = $ProgressBar
+@onready var _fill: Node3D = $ProgressBar/Fill
 
 func _ready() -> void:
 	add_to_group("station")
 	_update_label()
+	_update_bar()
 
 func accepts(item_kind: String) -> bool:
 	return item_kind == "log"
@@ -34,6 +37,7 @@ func _process(delta: float) -> void:
 		if _timer <= 0.0:
 			_finish_one()
 		_update_label()
+		_update_bar()
 	elif _queue > 0:
 		_start_one()
 
@@ -42,6 +46,7 @@ func _start_one() -> void:
 	_working = true
 	_timer = process_time
 	_update_label()
+	_update_bar()
 
 func _finish_one() -> void:
 	_working = false
@@ -51,6 +56,16 @@ func _finish_one() -> void:
 		var jitter := Vector3(randf_range(-0.3, 0.3), 0.0, randf_range(-0.3, 0.3))
 		plank.global_transform = Transform3D(Basis.IDENTITY, _output.global_position + jitter)
 	_update_label()
+	_update_bar()
+
+## Progress bar: visible only while working; the fill grows left-to-right 0 -> 1.
+func _update_bar() -> void:
+	_progress_bar.visible = _working
+	# Keep a tiny minimum so the fill's transform never collapses to zero scale.
+	var progress := 0.02
+	if _working and process_time > 0.0:
+		progress = clampf(1.0 - _timer / process_time, 0.02, 1.0)
+	_fill.scale.x = progress
 
 func _update_label() -> void:
 	if _working:

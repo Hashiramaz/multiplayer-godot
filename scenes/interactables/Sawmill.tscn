@@ -1,38 +1,58 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://0f7aopcqkhmj"]
 
-[ext_resource type="Script" path="res://scripts/interactables/sawmill.gd" id="1_sawmill"]
+[ext_resource type="Script" uid="uid://cblcnt36w6rum" path="res://scripts/interactables/sawmill.gd" id="1_sawmill"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/Plank.tscn" id="2_plank"]
+[ext_resource type="PackedScene" uid="uid://dga05ut4nusol" path="res://Assets/Visual/Props/SM_Workbench/SM_workbench.fbx" id="3_workbench"]
 
 [sub_resource type="BoxShape3D" id="area_shape"]
 size = Vector3(3, 2, 3)
 
-[sub_resource type="BoxMesh" id="base_mesh"]
-size = Vector3(1.8, 0.8, 1.2)
+[sub_resource type="BoxMesh" id="bar_bg_mesh"]
+size = Vector3(1.4, 0.2, 0.08)
 
-[sub_resource type="StandardMaterial3D" id="base_mat"]
-albedo_color = Color(0.45, 0.45, 0.5, 1)
-metallic = 0.4
-roughness = 0.6
+[sub_resource type="StandardMaterial3D" id="bar_bg_mat"]
+albedo_color = Color(0.08, 0.09, 0.11, 1)
 
-[node name="Sawmill" type="Area3D"]
+[sub_resource type="BoxMesh" id="bar_fill_mesh"]
+size = Vector3(1.4, 0.14, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="bar_fill_mat"]
+albedo_color = Color(0.4, 0.85, 0.4, 1)
+emission_enabled = true
+emission = Color(0.2, 0.6, 0.2, 1)
+
+[node name="Sawmill" type="Area3D" unique_id=718002135]
 script = ExtResource("1_sawmill")
 plank_scene = ExtResource("2_plank")
 
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1683974159]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("area_shape")
 
-[node name="Base" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
-mesh = SubResource("base_mesh")
-surface_material_override/0 = SubResource("base_mat")
+[node name="Workbench" parent="." unique_id=1513229230 instance=ExtResource("3_workbench")]
+transform = Transform3D(-1.6588473e-07, 0, 3.795, 0, 3.795, 0, -3.795, 0, -1.6588473e-07, 0, 0, 0)
 
-[node name="Output" type="Marker3D" parent="."]
+[node name="Output" type="Marker3D" parent="." unique_id=1434880931]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 1.3)
 
-[node name="Label" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
-billboard = 1
+[node name="Label" type="Label3D" parent="." unique_id=980955179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 pixel_size = 0.01
-font_size = 56
+billboard = 1
 text = "Serraria"
+font_size = 56
+
+[node name="ProgressBar" type="Node3D" parent="." unique_id=120831292]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Bg" type="MeshInstance3D" parent="ProgressBar" unique_id=1883507483]
+mesh = SubResource("bar_bg_mesh")
+surface_material_override/0 = SubResource("bar_bg_mat")
+
+[node name="Fill" type="Node3D" parent="ProgressBar" unique_id=783518897]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0.02)
+
+[node name="FillMesh" type="MeshInstance3D" parent="ProgressBar/Fill" unique_id=2057959525]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0)
+mesh = SubResource("bar_fill_mesh")
+surface_material_override/0 = SubResource("bar_fill_mat")
