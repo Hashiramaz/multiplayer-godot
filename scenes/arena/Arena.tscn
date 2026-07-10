@@ -1,10 +1,11 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
 [ext_resource type="Script" path="res://scripts/camera/camera_rig.gd" id="cam"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/Carriable.tscn" id="log"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
 [ext_resource type="Shader" path="res://Assets/Visual/Shaders/posterize_outline.gdshader" id="pp_shader"]
@@ -115,6 +116,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, 2)
 
 [node name="Boat" parent="Interactables" instance=ExtResource("boat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9)
+
+[node name="Sawmill" parent="Interactables" instance=ExtResource("sawmill")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
 [node name="Log1" parent="Interactables" instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.25, -3)

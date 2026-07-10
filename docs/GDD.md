@@ -51,6 +51,35 @@ Ambas dão o "timer com tensão crescente" que combina com o core loop cooperati
 ### Alternativas consideradas (arquivadas)
 - Oficina de reparo espacial 🚀 · Ateliê de poções 🧪 · Fábrica de robôs 🤖 · Abrigo de bichos 🐾
 
+## Backlog de ideias de gameplay (não priorizadas)
+Objetivo geral: sair de um loop **paralelo** (todos fazendo o mesmo) para um loop
+**interdependente e encadeado** (estilo Overcooked). Custo: 🟢 barato · 🟡 médio · 🔴 ambicioso.
+
+### 1. Encadeamento de recursos 🟢 *(em andamento: serraria)*
+- Tora → **serraria** → tábua → barco (passo intermediário). ✅ primeira fatia
+- Múltiplos recursos em zonas diferentes (madeira, corda/fibra, pano de vela) → força espalhar.
+- Barco em etapas (casco → mastro → vela → mantimentos), cada uma pedindo recurso diferente.
+
+### 2. Interação cooperativa de verdade 🟡
+- **Arremessar** itens para o colega (segurar + ação) — atravessar rios/fossos.
+- **Carga pesada a dois**: peças grandes exigem 2 pinguins carregando juntos.
+- **Ponte improvisada**: largar uma tora atravessando um rio vira passagem temporária.
+
+### 3. A ameaça virando espaço (o "tempero") 🟡🔴
+- **Maré/lava subindo** que encolhe a área jogável (sinergia com a câmera compartilhada).
+- **Tremores do vulcão** soltam pedras que bloqueiam rotas no meio da partida.
+- Ameaça que dá pra **atrasar**: balde tira água / esfria lava (gasta um jogador, compra tempo).
+
+### 4. Sabor e obstáculos 🟢
+- **Caranguejos/gaivotas** que roubam a tora da mão se você parar perto.
+- Terreno: lama que deixa lento, poças que fazem derrubar o item.
+- **Ferramentas pegáveis** (machado corta mais rápido) — disputáveis.
+
+### 5. Tensão, placar e replay 🟢
+- Derrotas variadas: "o barco encheu de água", "todos ilhados pela maré".
+- **Nota da fuga** (estrelas por tempo/recursos), estilo Overcooked.
+- "Quase!": fugir com 3 de 4 pinguins.
+
 ## Fora de escopo por agora
 - Online/rede (previsto, não travado — ver ARCHITECTURE).
 - Progressão, UI polida, áudio, arte final, temática fechada.

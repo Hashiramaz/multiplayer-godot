@@ -57,7 +57,15 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [ ] **VALIDAR/AFINAR:** escala e rotação do pinguim; parâmetros do shader; paleta
 - [ ] (depois) cor por jogador no pinguim; mais assets/estações temáticas
 
-## Fase 8 — Tempero: terreno encolhendo (adiado)  [ ]
+## Fase 8 — Profundidade de gameplay (encadeamento)  [~]
+Backlog completo de ideias no GDD (`docs/GDD.md`). Primeira fatia:
+- [x] **Serraria**: tora → (processa) → tábua; barco só aceita tábua (loop encadeado)
+- [x] Estações com interface `accepts(kind)`/`submit(item)`; item tem `kind` (log/plank)
+- [x] Câmera solo afastada (`min_distance` 9 → 13)
+- [ ] **VALIDAR:** levar tora à serraria, pegar a tábua que sai, entregar no barco
+- [ ] (próximos) 2º recurso/zona · arremessar/carga a dois · placar
+
+## Fase 9 — Tempero: terreno encolhendo (adiado)  [ ]
 - [ ] Área jogável (maré/lava) que diminui com o tempo, empurrando os jogadores
 - [ ] Sinergia com a câmera compartilhada (grupo forçado a se aproximar)
 

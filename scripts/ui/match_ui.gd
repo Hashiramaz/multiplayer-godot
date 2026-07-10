@@ -55,6 +55,7 @@ func _end(won: bool) -> void:
 
 func _update_timer_label() -> void:
 	var total := int(ceil(_time_left))
+	@warning_ignore("integer_division")
 	timer_label.text = "Tempo  %02d:%02d" % [total / 60, total % 60]
 	if _time_left <= low_time_warning:
 		timer_label.modulate = Color(1.0, 0.4, 0.35)

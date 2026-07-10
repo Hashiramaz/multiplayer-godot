@@ -100,13 +100,30 @@ func _try_pickup() -> void:
 	item.transform = Transform3D.IDENTITY
 
 func _deliver_or_drop() -> void:
-	var station := _nearest_in_group("station")
-	if station != null and station.has_method("deliver") and station.can_deliver():
-		if station.deliver():
-			_carried.queue_free()
-			_carried = null
-			return
+	var kind := ""
+	if _carried.has_method("get_kind"):
+		kind = str(_carried.get_kind())
+	var station := _nearest_station_for(kind)
+	# The station consumes the carried item itself; we just let go of it.
+	if station != null and station.submit(_carried):
+		_carried = null
+		return
 	_drop()
+
+## Nearest station in range that actually accepts what we're carrying.
+func _nearest_station_for(kind: String) -> Node3D:
+	var best: Node3D = null
+	var best_dist := INF
+	for area in interaction_area.get_overlapping_areas():
+		if not area.is_in_group("station"):
+			continue
+		if not (area.has_method("accepts") and area.accepts(kind)):
+			continue
+		var d := global_position.distance_to((area as Node3D).global_position)
+		if d < best_dist:
+			best_dist = d
+			best = area
+	return best
 
 func _drop() -> void:
 	var item := _carried

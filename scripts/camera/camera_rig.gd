@@ -17,7 +17,7 @@ extends Node3D
 @export_group("Framing")
 @export var fit_margin: float = 1.4 ## Extra breathing room around the players.
 @export var player_extent: float = 1.2 ## Half-size padding so bodies aren't clipped.
-@export var min_distance: float = 9.0 ## Closest zoom (solo / gathered).
+@export var min_distance: float = 13.0 ## Closest zoom (solo / gathered).
 @export var max_distance: float = 34.0 ## Farthest zoom (fully spread out).
 @export var look_height: float = 0.8 ## Aim slightly above the ground plane.
 
