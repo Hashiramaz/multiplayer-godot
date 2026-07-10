@@ -1,14 +1,14 @@
 [gd_scene format=3 uid="uid://chjyxevempp4r"]
 
 [ext_resource type="Script" uid="uid://0vmitq0pxrw3" path="res://scripts/arena/arena.gd" id="arena"]
-[ext_resource type="PackedScene" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
+[ext_resource type="PackedScene" uid="uid://b4q8lqf808ayr" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
 [ext_resource type="Script" uid="uid://bfd6n20s3xl5e" path="res://scripts/camera/camera_rig.gd" id="cam"]
-[ext_resource type="PackedScene" path="res://scenes/interactables/Carriable.tscn" id="log"]
+[ext_resource type="PackedScene" uid="uid://dgfn40nirh4us" path="res://scenes/interactables/Carriable.tscn" id="log"]
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
-[ext_resource type="Shader" uid="uid://bvjloitb18o42" path="res://Assets/Shaders/posterize_outline.gdshader" id="pp_shader"]
-[ext_resource type="PackedScene" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
+[ext_resource type="Material" uid="uid://ba7ailjdm7u5t" path="res://Assets/Shaders/posterize_pp.tres" id="pp_material"]
+[ext_resource type="PackedScene" uid="uid://0f7aopcqkhmj" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 
@@ -49,28 +49,6 @@ size = Vector3(2, 1, 2)
 [sub_resource type="QuadMesh" id="pp_quad"]
 flip_faces = true
 size = Vector2(2, 2)
-
-[sub_resource type="ShaderMaterial" id="pp_mat"]
-render_priority = 0
-shader = ExtResource("pp_shader")
-shader_parameter/zNear = 0.05
-shader_parameter/zFar = 100.0
-shader_parameter/enable_outline = true
-shader_parameter/outline_color = Color(0, 0, 0, 1)
-shader_parameter/outline_thickness = 1.5
-shader_parameter/enable_color_limit = true
-shader_parameter/color_levels = 8
-shader_parameter/enable_color_palette = true
-shader_parameter/color1 = Color(1, 0.925, 0.839, 1)
-shader_parameter/color2 = Color(1, 0.831, 0.639, 1)
-shader_parameter/color3 = Color(1, 0.667, 0.369, 1)
-shader_parameter/color4 = Color(0.816, 0.506, 0.349, 1)
-shader_parameter/color5 = Color(0.553, 0.412, 0.478, 1)
-shader_parameter/color6 = Color(0.329, 0.306, 0.408, 1)
-shader_parameter/color7 = Color(0.125, 0.236, 0.337, 1)
-shader_parameter/color8 = Color(0.05, 0.169, 0.271, 1)
-shader_parameter/enable_dithering = true
-shader_parameter/dither_strength = 0.15
 
 [node name="Arena" type="Node3D" unique_id=352569236]
 script = ExtResource("arena")
@@ -158,7 +136,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
 cast_shadow = 0
 extra_cull_margin = 16384.0
 mesh = SubResource("pp_quad")
-surface_material_override/0 = SubResource("pp_mat")
+surface_material_override/0 = ExtResource("pp_material")
 
 [node name="PauseMenu" parent="." unique_id=1416911999 instance=ExtResource("pause")]
 

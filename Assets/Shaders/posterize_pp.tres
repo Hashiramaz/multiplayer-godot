@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://ba7ailjdm7u5t"]
+
+[ext_resource type="Shader" uid="uid://bvjloitb18o42" path="res://Assets/Shaders/posterize_outline.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/zNear = 0.05
+shader_parameter/zFar = 100.0
+shader_parameter/enable_outline = true
+shader_parameter/outline_color = Color(0, 0, 0, 1)
+shader_parameter/outline_thickness = 0.665
+shader_parameter/enable_color_limit = false
+shader_parameter/color_levels = 8
+shader_parameter/enable_color_palette = false
+shader_parameter/color1 = Color(1, 0.9647, 0.851, 1)
+shader_parameter/color2 = Color(0.9608, 0.851, 0.5451, 1)
+shader_parameter/color3 = Color(0.6118, 0.8392, 0.4784, 1)
+shader_parameter/color4 = Color(0.3098, 0.7059, 0.4667, 1)
+shader_parameter/color5 = Color(0.2078, 0.6275, 0.6275, 1)
+shader_parameter/color6 = Color(0.1804, 0.4902, 0.651, 1)
+shader_parameter/color7 = Color(0.1412, 0.3608, 0.5255, 1)
+shader_parameter/color8 = Color(0.0863, 0.1882, 0.3098, 1)
+shader_parameter/enable_dithering = false
+shader_parameter/dither_strength = 0.262000012445
