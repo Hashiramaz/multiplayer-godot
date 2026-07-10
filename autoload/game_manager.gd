@@ -2,7 +2,7 @@ extends Node
 ## Global game state + high-level scene flow (autoload / singleton, like a Unity
 ## manager). Flow: MainMenu -> Lobby -> Arena, with in-match pause.
 
-enum State { BOOT, MENU, LOBBY, PLAYING, PAUSED }
+enum State { BOOT, MENU, LOBBY, PLAYING, PAUSED, RESULT }
 
 const MAIN_MENU_SCENE: String = "res://scenes/menu/MainMenu.tscn"
 const LOBBY_SCENE: String = "res://scenes/lobby/Lobby.tscn"

@@ -99,6 +99,16 @@ Modelo por **grupos + Area3D**, sem herança pesada:
 - Input da ação: `PlayerInput.interact_just_pressed()` (edge por device — gamepad
   A, teclado E/Espaço).
 
+## Partida: relógio + vitória/derrota (Fase 6)
+`MatchUI.tscn` (`CanvasLayer`, `match_ui.gd`, process **PAUSABLE**) na Arena:
+- Relógio regressivo (`match_duration`, `@export`) no HUD; por ser PAUSABLE, o pause
+  congela o relógio junto.
+- **Vitória**: escuta `BoatStation.completed`. **Derrota**: relógio chega a zero.
+- Ao terminar: `GameManager.state = RESULT`, desabilita os players
+  (`process_mode = DISABLED`) — em vez de `get_tree().paused`, pra tela de resultado
+  seguir respondendo — e mostra "Jogar de novo / Menu principal". O `PauseMenu`
+  ignora input enquanto o estado é `RESULT`.
+
 ## Autoloads
 - `GameManager` — estado global (enum BOOT/MENU/LOBBY/PLAYING/PAUSED) + flow de
   cena (`start_match`, `return_to_lobby`).

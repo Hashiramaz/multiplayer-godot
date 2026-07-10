@@ -43,12 +43,20 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] PauseMenu (CanvasLayer ALWAYS) na Arena: Start/Esc; Continuar/Lobby/Menu
 - [ ] **VALIDAR:** navegar Menu→Lobby→Jogo por controle; pausar e usar cada opção
 
-## Fase 6 — Vertical slice temática  [ ]
-- [ ] Escolher temática (ver GDD) e montar 1 mini-desafio jogável
+## Fase 6 — Core loop: relógio + vitória/derrota  [x] (aguardando validação)
+- [x] MatchUI (CanvasLayer PAUSABLE): relógio regressivo no HUD (o pause congela junto)
+- [x] Vitória ao completar o barco a tempo; derrota quando o tempo zera
+- [x] Tela de resultado (Jogar de novo / Menu principal), com a ponte do A do controle
+- [x] Estado RESULT no GameManager; pause fica silencioso durante o resultado
+- [ ] **VALIDAR:** ganhar (barco a tempo) e perder (deixar o tempo acabar)
+
+## Fase 7 — Tempero: terreno encolhendo (adiado)  [ ]
+- [ ] Área jogável (maré/lava) que diminui com o tempo, empurrando os jogadores
+- [ ] Sinergia com a câmera compartilhada (grupo forçado a se aproximar)
 
 ---
 ### Status atual
-Fases 0–5 implementadas: fluxo completo Menu → Lobby → Jogo + pause, com a mecânica
-de pegar toras e construir o barco ("Escape the Island"). **Próximo passo:** validar
-o fluxo no F5; depois, Fase 6 (vertical slice) e um relógio de ameaça (vulcão/maré)
-com condições de vitória/derrota.
+Fases 0–6 implementadas: core loop jogável de ponta a ponta — Menu → Lobby → Jogo
+(pegar toras, construir o barco contra o relógio) → vitória/derrota → resultado.
+**Próximo passo:** validar ganhar/perder no F5; afinar `match_duration`. Depois,
+Fase 7 (terreno encolhendo) e polish (áudio, arte, feedback).

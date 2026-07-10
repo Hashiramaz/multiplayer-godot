@@ -10,12 +10,13 @@ Pegar objeto → transportar → usar/combinar numa estação → entregar um re
 antes do tempo acabar. Obstáculos e o próprio layout forçam coordenação entre os
 jogadores. Loop agnóstico de temática — prototipado com primitivas.
 
-### Protótipo de mecânica atual (Fase 4)
+### Protótipo de mecânica atual (Fases 4 e 6)
 Primeira encarnação temática do loop: espalhadas pela arena há **toras de madeira**
 (pegáveis); os jogadores as levam até a **estação-barco**, que se constrói prancha
-por prancha até ficar pronta ("BARCO PRONTO!"). Ainda sem relógio de ameaça — o
-timer (vulcão/maré) e as complicações (rotas bloqueadas, etapas com mais recursos)
-entram nas próximas fases.
+por prancha. Um **relógio regressivo** (a ameaça da ilha) roda o tempo todo:
+**completar o barco a tempo = escaparam** (vitória); **o tempo zerar antes = a ilha
+venceu** (derrota). Segue com primitivas. Próximas camadas: **terreno encolhendo**
+(maré/lava), complicações de rota e etapas com mais recursos.
 
 ## Jogadores e controle
 - Até 4 jogadores locais, cada um em **um dispositivo** (controle; teclado serve

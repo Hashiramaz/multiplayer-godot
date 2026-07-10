@@ -13,6 +13,9 @@ func _ready() -> void:
 	($Panel/VBox/Menu as Button).pressed.connect(_go_menu)
 
 func _input(event: InputEvent) -> void:
+	# Once the match is over (result screen up), the pause menu goes silent.
+	if GameManager.state == GameManager.State.RESULT:
+		return
 	if _is_toggle(event):
 		get_viewport().set_input_as_handled()
 		if get_tree().paused:
