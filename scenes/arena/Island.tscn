@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena/island.gd" id="1_island"]
+[ext_resource type="Material" path="res://Assets/Shaders/toon_water.tres" id="2_water"]
+
+[sub_resource type="PlaneMesh" id="water_mesh"]
+size = Vector2(90, 90)
+
+[node name="Island" type="Node3D"]
+
+[node name="Terrain" type="MeshInstance3D" parent="."]
+script = ExtResource("1_island")
+
+[node name="Water" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, 0)
+mesh = SubResource("water_mesh")
+material_override = ExtResource("2_water")

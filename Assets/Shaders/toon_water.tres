@@ -1,0 +1,35 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://03tsqnokhtco"]
+
+[ext_resource type="Shader" uid="uid://dmmvaghhw6jl3" path="res://Assets/Shaders/toon_water.gdshader" id="1_shader"]
+
+[sub_resource type="FastNoiseLite" id="fnl_distort"]
+frequency = 0.1
+
+[sub_resource type="NoiseTexture2D" id="tex_distort"]
+noise = SubResource("fnl_distort")
+seamless = true
+
+[sub_resource type="FastNoiseLite" id="fnl_surface"]
+frequency = 0.05
+
+[sub_resource type="NoiseTexture2D" id="tex_surface"]
+noise = SubResource("fnl_surface")
+seamless = true
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/surfaceNoise = SubResource("tex_surface")
+shader_parameter/distortNoise = SubResource("tex_distort")
+shader_parameter/beer_factor = 1.5
+shader_parameter/foam_max_distance = 0.4
+shader_parameter/foam_min_distance = 0.04
+shader_parameter/foam_color = Color(1, 1, 1, 1)
+shader_parameter/surface_noise_tiling = Vector2(8, 8)
+shader_parameter/surface_noise_scroll = Vector3(0.03, 0.03, 0)
+shader_parameter/surface_noise_cutoff = 0.6
+shader_parameter/surface_distortion_amount = 0.15
+shader_parameter/depth_gradient_shallow = Color(0.3, 0.8, 0.85, 0.55)
+shader_parameter/depth_gradient_deep = Color(0.1, 0.4, 0.65, 0.85)
+shader_parameter/depth_max_distance = 1.0
+shader_parameter/depth_factor = 1.0

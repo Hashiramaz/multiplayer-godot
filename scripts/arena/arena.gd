@@ -11,6 +11,17 @@ extends Node3D
 
 func _ready() -> void:
 	_spawn_players()
+	_setup_outline()
+
+## Attaches the outline post-process as a CompositorEffect on the camera. Doing it
+## after transparents (inside the effect) is what lets the transparent water show.
+func _setup_outline() -> void:
+	var camera := get_node_or_null("CameraRig/Camera3D") as Camera3D
+	if camera == null:
+		return
+	var compositor := Compositor.new()
+	compositor.compositor_effects = [OutlineEffect.new()]
+	camera.compositor = compositor
 
 func _spawn_players() -> void:
 	if player_scene == null:

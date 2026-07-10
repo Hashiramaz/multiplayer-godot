@@ -7,8 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
-[ext_resource type="Material" uid="uid://ba7ailjdm7u5t" path="res://Assets/Shaders/posterize_pp.tres" id="pp_material"]
 [ext_resource type="PackedScene" uid="uid://0f7aopcqkhmj" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
+[ext_resource type="PackedScene" path="res://scenes/arena/Island.tscn" id="island"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 
@@ -28,28 +28,6 @@ adjustment_enabled = true
 adjustment_contrast = 1.08
 adjustment_saturation = 1.15
 
-[sub_resource type="BoxMesh" id="floor_mesh"]
-size = Vector3(40, 1, 40)
-
-[sub_resource type="StandardMaterial3D" id="floor_mat"]
-albedo_color = Color(0.35, 0.42, 0.35, 1)
-
-[sub_resource type="BoxShape3D" id="floor_shape"]
-size = Vector3(40, 1, 40)
-
-[sub_resource type="BoxMesh" id="obs_mesh"]
-size = Vector3(2, 1, 2)
-
-[sub_resource type="StandardMaterial3D" id="obs_mat"]
-albedo_color = Color(0.7, 0.5, 0.3, 1)
-
-[sub_resource type="BoxShape3D" id="obs_shape"]
-size = Vector3(2, 1, 2)
-
-[sub_resource type="QuadMesh" id="pp_quad"]
-flip_faces = true
-size = Vector2(2, 2)
-
 [node name="Arena" type="Node3D" unique_id=352569236]
 script = ExtResource("arena")
 player_scene = ExtResource("player_scene")
@@ -64,25 +42,7 @@ light_energy = 1.35
 light_angular_distance = 1.5
 shadow_enabled = true
 
-[node name="Floor" type="StaticBody3D" parent="." unique_id=709559182]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=835095901]
-mesh = SubResource("floor_mesh")
-surface_material_override/0 = SubResource("floor_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=214357602]
-shape = SubResource("floor_shape")
-
-[node name="Obstacle" type="StaticBody3D" parent="." unique_id=1762303042]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.5, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacle" unique_id=462423361]
-mesh = SubResource("obs_mesh")
-surface_material_override/0 = SubResource("obs_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacle" unique_id=135389705]
-shape = SubResource("obs_shape")
+[node name="Island" parent="." instance=ExtResource("island")]
 
 [node name="SpawnPoints" type="Node3D" parent="." unique_id=1285029624]
 
@@ -130,13 +90,6 @@ camera_path = NodePath("Camera3D")
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=459463414]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 12, 12)
 fov = 45.0
-
-[node name="PostProcess" type="MeshInstance3D" parent="CameraRig/Camera3D" unique_id=1897753922]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
-cast_shadow = 0
-extra_cull_margin = 16384.0
-mesh = SubResource("pp_quad")
-surface_material_override/0 = ExtResource("pp_material")
 
 [node name="PauseMenu" parent="." unique_id=1416911999 instance=ExtResource("pause")]
 
