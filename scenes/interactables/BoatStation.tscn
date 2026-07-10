@@ -1,0 +1,59 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/interactables/boat_station.gd" id="1_boat"]
+
+[sub_resource type="BoxShape3D" id="area_shape"]
+size = Vector3(4, 2, 3)
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(3, 0.4, 1.6)
+
+[sub_resource type="StandardMaterial3D" id="base_mat"]
+albedo_color = Color(0.36, 0.24, 0.14, 1)
+
+[sub_resource type="BoxMesh" id="plank_mesh"]
+size = Vector3(0.3, 0.25, 1.6)
+
+[sub_resource type="StandardMaterial3D" id="plank_mat"]
+albedo_color = Color(0.6, 0.43, 0.25, 1)
+
+[node name="BoatStation" type="Area3D"]
+script = ExtResource("1_boat")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("area_shape")
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+mesh = SubResource("base_mesh")
+surface_material_override/0 = SubResource("base_mat")
+
+[node name="Planks" type="Node3D" parent="."]
+
+[node name="Plank1" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 0.55, 0)
+mesh = SubResource("plank_mesh")
+surface_material_override/0 = SubResource("plank_mat")
+
+[node name="Plank2" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0.55, 0)
+mesh = SubResource("plank_mesh")
+surface_material_override/0 = SubResource("plank_mat")
+
+[node name="Plank3" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.55, 0)
+mesh = SubResource("plank_mesh")
+surface_material_override/0 = SubResource("plank_mat")
+
+[node name="Plank4" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 0.55, 0)
+mesh = SubResource("plank_mesh")
+surface_material_override/0 = SubResource("plank_mat")
+
+[node name="Progress" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+billboard = 1
+pixel_size = 0.01
+font_size = 64
+text = "Barco  0/4"

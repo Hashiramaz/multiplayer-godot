@@ -15,6 +15,8 @@ const DEADZONE: float = 0.2
 
 var device: int = DEVICE_NONE
 
+var _interact_prev: bool = false
+
 func _init(p_device: int = DEVICE_NONE) -> void:
 	device = p_device
 
@@ -49,3 +51,20 @@ func _pad_vector(dev: int) -> Vector2:
 	if v.length() < DEADZONE:
 		return Vector2.ZERO
 	return v.limit_length(1.0)
+
+## Rising edge of the "interact" button for this device (gamepad A, keyboard E/Space).
+## Call once per frame; it tracks its own previous state.
+func interact_just_pressed() -> bool:
+	var now := _interact_down()
+	var just := now and not _interact_prev
+	_interact_prev = now
+	return just
+
+func _interact_down() -> bool:
+	match device:
+		DEVICE_NONE:
+			return false
+		DEVICE_KEYBOARD:
+			return Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE)
+		_:
+			return Input.is_joy_button_pressed(device, JOY_BUTTON_A)

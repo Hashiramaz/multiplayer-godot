@@ -29,9 +29,13 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] Removido o DEBUG_ANY; fallback de teclado ao abrir a Arena direto
 - [ ] **VALIDAR:** entrar com teclado e controle(s), começar, e cada um mover o seu boneco
 
-## Fase 4 — Pegar / carregar / interagir  [ ]
-- [ ] `Interactable` base + itens pegáveis (reparent p/ "mão")
-- [ ] Estação de interação (Area3D) e soltar/entregar
+## Fase 4 — Pegar / carregar / interagir  [x] (aguardando validação)
+- [x] Ação `interact` por device (edge): gamepad A, teclado E/Espaço
+- [x] `Carriable` (tora, Area3D grupo "carriable"); pegar = reparent p/ HoldPoint
+- [x] `Player` com InteractionArea (esfera): pega o mais próximo, entrega ou solta
+- [x] `BoatStation` (Area3D grupo "station"): entrega revela pranchas, Label3D "Barco N/4"
+- [x] Arena povoada com 5 toras + o barco
+- [ ] **VALIDAR:** pegar tora, levar ao barco, ver as pranchas subindo até "BARCO PRONTO!"
 
 ## Fase 5 — Menu → Lobby → Jogo + pause  [ ]
 - [ ] Menu principal navegável por controle
@@ -42,6 +46,6 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 
 ---
 ### Status atual
-Fases 0–3 implementadas (join local + spawn por device). Temática escolhida:
-"Escape the Island" (ver GDD), mecânicas ainda não desenhadas. **Próximo passo:**
-validar o join/movimento com teclado + controle(s); depois, Fase 4 (pegar/interagir).
+Fases 0–4 implementadas. Primeira mecânica temática no ar: pegar toras e construir
+o barco ("Escape the Island"). **Próximo passo:** validar o loop pegar→entregar no
+F5; depois, Fase 5 (menu → lobby → jogo + pause) e um relógio de ameaça (vulcão/maré).

@@ -71,6 +71,20 @@ Roda em `_process`. Calcula o **centroide** dos nós do grupo `"players"`, mede 
 `centro + view_offset.normalized() * distância` e faz `look_at(centro)`, tudo com
 `lerp` para suavizar. Um jogador → segue; vários → enquadra todos.
 
+## Interação: pegar / carregar / entregar (Fase 4)
+Modelo por **grupos + Area3D**, sem herança pesada:
+- **Carriable** (`carriable.gd`, grupo `"carriable"`) — a tora. É um `Area3D`;
+  enquanto carregado fica `monitorable=false` (some da detecção).
+- **BoatStation** (`boat_station.gd`, grupo `"station"`) — o barco. `Area3D` com
+  N pranchas escondidas; `deliver()` revela uma e atualiza o `Label3D`; ao chegar
+  em `required` emite `completed`.
+- **Player** tem um `HoldPoint` (sob o Pivot, à frente) e um `InteractionArea`
+  (esfera). Ao apertar `interact`: sem carregar → pega o `"carriable"` mais
+  próximo (reparent p/ HoldPoint); carregando → se há `"station"` que aceita,
+  entrega (consome a tora); senão, solta à frente no chão.
+- Input da ação: `PlayerInput.interact_just_pressed()` (edge por device — gamepad
+  A, teclado E/Espaço).
+
 ## Autoloads
 - `GameManager` — estado global (enum BOOT/MENU/LOBBY/PLAYING/PAUSED) + flow de
   cena (`start_match`, `return_to_lobby`).
