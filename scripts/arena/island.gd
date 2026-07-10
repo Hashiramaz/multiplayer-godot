@@ -46,8 +46,28 @@ func build_from(level: LevelData) -> void:
 	if _heights_invalid():
 		heights = LevelData.bake_island_heights(size, resolution)
 	_generate_mesh()
+	_update_water()
 	if not Engine.is_editor_hint():
 		_generate_collision()
+
+## Updates colors + water line and regenerates the mesh WITHOUT touching heights, so
+## the editor's Properties panel can restyle terrain without reverting a sculpt.
+func set_appearance(grass: Color, sand: Color, seabed: Color, water: float) -> void:
+	grass_color = grass
+	sand_color = sand
+	seabed_color = seabed
+	water_level = water
+	_generate_mesh()
+	_update_water()
+
+## Moves the sibling water plane (if any) to the water line.
+func _update_water() -> void:
+	var parent := get_parent()
+	if parent == null:
+		return
+	var water := parent.get_node_or_null("Water")
+	if water is Node3D:
+		(water as Node3D).position.y = water_level
 
 func _row() -> int:
 	return resolution + 1

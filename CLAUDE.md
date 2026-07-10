@@ -21,10 +21,16 @@ está fechada (candidatas no GDD); o foco atual é o protótipo de mecânicas.
 ## Como rodar
 Abrir o projeto na Godot 4.7 e apertar Play (F5). Fluxo:
 `MainMenu` → **Jogar** → `Lobby` (join local: **A/Enter** entra, **B/Esc** sai,
-**Start/Espaço** começa) → `Arena` (spawna 1 jogador por device; movimento com
-analógico/WASD, **A/E** pega/entrega tora no barco). Na Arena, **Start/Esc** = pause
-(Continuar / Voltar ao Lobby / Menu principal). Menus navegáveis por controle e teclado.
-Abrir a Arena direto cai num fallback de 1 jogador de teclado.
+**Start/Espaço** começa) → `LevelSelect` (escolher a fase) → `Arena` (spawna 1
+jogador por device; movimento com analógico/WASD, **A/E** pega/entrega tora no barco).
+Na Arena, **Start/Esc** = pause (Continuar / Voltar ao Lobby / Menu principal). Menus
+navegáveis por controle e teclado. Abrir a Arena direto cai num fallback de 1 jogador
+de teclado + ilha padrão.
+
+`MainMenu` → **Editor de Níveis** → `LevelEditor` (mouse+teclado): esculpir terreno,
+posicionar objetos/cenário/spawns, editar propriedades, salvar em `res://levels/` e
+testar. As fases salvas aparecem na `LevelSelect`. Detalhes do formato de fase e do
+editor em `docs/ARCHITECTURE.md`.
 
 ## Como gerar build (Windows)
 Preset `export_presets.cfg` → **Windows Desktop**, saída em `build/windows/EscapeTheIsland.exe`
@@ -35,11 +41,15 @@ Exportar Projeto. Ou via CLI headless (com o editor fechado):
 
 ## Estrutura
 ```
-autoload/   game_manager.gd, player_manager.gd   (singletons globais)
-scenes/     arena/Arena.tscn, player/Player.tscn
-scripts/    player/, camera/, arena/, input/       (lógica separada das cenas)
+autoload/   game_manager.gd, player_manager.gd, level_catalog.gd  (singletons globais)
+scenes/     arena/, player/, lobby/, menu/, levels/ (LevelSelect), editor/ (LevelEditor), props/
+scripts/    player/, camera/, arena/, input/, ui/, levels/ (LevelData/PlacedObject/ObjectDef),
+            editor/ (level_editor, editor_camera), props/ (scenery)
+levels/     fases salvas (.tres) — carregadas pela LevelSelect
 docs/       GDD.md, ARCHITECTURE.md, ROADMAP.md
 ```
+As fases são **dados** (`LevelData`, um `Resource`): a Arena constrói terreno + objetos
+a partir do nível selecionado, em vez de conteúdo fixo. Ver `docs/ARCHITECTURE.md`.
 
 ## Convenções
 - Nós de cena em PascalCase; arquivos de script em snake_case.

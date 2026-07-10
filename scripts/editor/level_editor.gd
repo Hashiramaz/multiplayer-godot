@@ -52,7 +52,12 @@ var _hint: Label
 var _terrain_panel: Control
 var _objects_panel: Control
 var _inspector_box: VBoxContainer
-var _placeholder: Label
+var _properties_panel: Control
+var _duration_spin: SpinBox
+var _water_spin: SpinBox
+var _grass_pick: ColorPickerButton
+var _sand_pick: ColorPickerButton
+var _seabed_pick: ColorPickerButton
 var _open_dialog: FileDialog
 
 func _ready() -> void:
@@ -68,6 +73,7 @@ func _load_into_scene() -> void:
 	_terrain.build_from(_level)
 	_rebuild_scene_items()
 	_select(null)
+	_refresh_properties()
 	_name_edit.text = _level.level_name
 	_set_hint("Fase carregada: %s" % _level.level_name)
 
@@ -81,8 +87,19 @@ func _rebuild_scene_items() -> void:
 	for i in _level.spawn_points.size():
 		_instantiate_spawn(_level.spawn_points[i], i)
 
-## Writes the working tree back into the LevelData. Called before Save / Test.
+## Writes the working scene back into the LevelData. Called before Save / Test.
+## The live terrain node is the source of truth for the (sculpted) heightmap -- it
+## diverges from _level.heights via copy-on-write the moment you paint, so we must
+## pull it back here or the save would keep the original flat island.
 func _sync_level_from_scene() -> void:
+	_level.heights = _terrain.heights
+	_level.terrain_size = _terrain.size
+	_level.terrain_resolution = _terrain.resolution
+	_level.water_level = _terrain.water_level
+	_level.grass_color = _terrain.grass_color
+	_level.sand_color = _terrain.sand_color
+	_level.seabed_color = _terrain.seabed_color
+
 	var objs: Array[PlacedObject] = []
 	var spawns: Array[Transform3D] = []
 	for node in _objects.get_children():
@@ -355,6 +372,10 @@ func _on_new() -> void:
 
 func _on_save() -> void:
 	_sync_level_from_scene()
+	var problem := _validate()
+	if problem != "":
+		_set_hint("Não salvo: %s" % problem)
+		return
 	_level.level_name = _name_edit.text.strip_edges()
 	if _level.level_name == "":
 		_level.level_name = "Nova Fase"
@@ -366,6 +387,20 @@ func _on_save() -> void:
 		_set_hint("Salvo em %s" % path)
 	else:
 		_set_hint("Falha ao salvar (%d)" % err)
+
+## Returns "" if the level is playable, else a short reason. A level needs somewhere
+## to spawn players and a boat to complete (the win condition).
+func _validate() -> String:
+	if _level.spawn_points.is_empty():
+		return "adicione ao menos 1 ponto de spawn"
+	var has_boat := false
+	for o in _level.objects:
+		if o.type_id == "boat":
+			has_boat = true
+			break
+	if not has_boat:
+		return "adicione um barco (objetivo)"
+	return ""
 
 func _on_open_pressed() -> void:
 	_open_dialog.popup_centered_ratio(0.6)
@@ -380,6 +415,10 @@ func _on_open_file(path: String) -> void:
 
 func _on_test() -> void:
 	_sync_level_from_scene()
+	var problem := _validate()
+	if problem != "":
+		_set_hint("Não dá pra testar: %s" % problem)
+		return
 	_level.level_name = _name_edit.text.strip_edges()
 	GameManager.selected_level = _level
 	GameManager.start_match()
@@ -391,9 +430,7 @@ func _set_tool_mode(mode: String) -> void:
 	_tool_mode = mode
 	_terrain_panel.visible = mode == "terrain"
 	_objects_panel.visible = mode == "objects"
-	_placeholder.visible = mode == "properties"
-	if mode == "properties":
-		_placeholder.text = "Propriedades: em breve (Fase E)"
+	_properties_panel.visible = mode == "properties"
 	if mode == "objects":
 		_refresh_inspector()
 
@@ -426,7 +463,7 @@ func _build_ui() -> void:
 	_build_toolbar()
 	_build_terrain_panel()
 	_build_objects_panel()
-	_build_placeholder()
+	_build_properties_panel()
 	_build_hint()
 	_build_open_dialog()
 	_set_tool_mode("terrain")
@@ -600,12 +637,58 @@ func _on_prop_bool(pressed: bool, pname: String) -> void:
 	_selected.set_meta("props", props)
 	_selected.set(pname, pressed)
 
-func _build_placeholder() -> void:
-	_placeholder = Label.new()
-	_placeholder.position = Vector2(12, 56)
-	_placeholder.add_theme_font_size_override("font_size", 16)
-	_placeholder.visible = false
-	_ui.add_child(_placeholder)
+func _build_properties_panel() -> void:
+	_properties_panel = PanelContainer.new()
+	_properties_panel.position = Vector2(8, 52)
+	_properties_panel.custom_minimum_size = Vector2(240, 0)
+	_properties_panel.visible = false
+	_ui.add_child(_properties_panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	_properties_panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "Propriedades da Fase"
+	title.add_theme_font_size_override("font_size", 18)
+	box.add_child(title)
+
+	_duration_spin = _make_spin(box, "Tempo (s)", 10.0, 999.0, 5.0, _level.match_duration, _on_duration_changed)
+	_water_spin = _make_spin(box, "Nível da água", -5.0, 5.0, 0.1, _level.water_level, _on_water_changed)
+
+	_add_section_label(box, "Cores do terreno")
+	_grass_pick = _make_color(box, "Grama", _level.grass_color, _on_grass_changed)
+	_sand_pick = _make_color(box, "Areia", _level.sand_color, _on_sand_changed)
+	_seabed_pick = _make_color(box, "Fundo", _level.seabed_color, _on_seabed_changed)
+
+	var note := Label.new()
+	note.text = "Nome: na barra de cima.\nObjetivo (barco): no inspector\ndo objeto barco."
+	note.add_theme_font_size_override("font_size", 12)
+	note.modulate = Color(1, 1, 1, 0.7)
+	box.add_child(note)
+
+func _on_duration_changed(v: float) -> void:
+	_level.match_duration = v
+
+func _on_water_changed(v: float) -> void:
+	_level.water_level = v
+	_apply_appearance()
+
+func _on_grass_changed(c: Color) -> void:
+	_level.grass_color = c
+	_apply_appearance()
+
+func _on_sand_changed(c: Color) -> void:
+	_level.sand_color = c
+	_apply_appearance()
+
+func _on_seabed_changed(c: Color) -> void:
+	_level.seabed_color = c
+	_apply_appearance()
+
+## Restyles the terrain from _level's colors/water without disturbing the sculpt.
+func _apply_appearance() -> void:
+	_terrain.set_appearance(_level.grass_color, _level.sand_color, _level.seabed_color, _level.water_level)
 
 func _build_hint() -> void:
 	_hint = Label.new()
@@ -646,6 +729,51 @@ func _add_section_label(parent: Node, text: String) -> void:
 	l.add_theme_font_size_override("font_size", 13)
 	l.modulate = Color(0.7, 0.85, 1.0)
 	parent.add_child(l)
+
+func _make_spin(parent: Node, label_text: String, min_v: float, max_v: float,
+		step: float, value: float, on_change: Callable) -> SpinBox:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(120, 0)
+	row.add_child(label)
+	var spin := SpinBox.new()
+	spin.min_value = min_v
+	spin.max_value = max_v
+	spin.step = step
+	spin.value = value
+	spin.value_changed.connect(on_change)
+	row.add_child(spin)
+	parent.add_child(row)
+	return spin
+
+func _make_color(parent: Node, label_text: String, value: Color, on_change: Callable) -> ColorPickerButton:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(120, 0)
+	row.add_child(label)
+	var picker := ColorPickerButton.new()
+	picker.custom_minimum_size = Vector2(80, 26)
+	picker.color = value
+	picker.edit_alpha = false
+	picker.color_changed.connect(on_change)
+	row.add_child(picker)
+	parent.add_child(row)
+	return picker
+
+## Pushes the current _level's properties into the panel controls after a load,
+## with signals blocked so it doesn't trigger appearance rebuilds.
+func _refresh_properties() -> void:
+	for c in [_duration_spin, _water_spin, _grass_pick, _sand_pick, _seabed_pick]:
+		(c as Node).set_block_signals(true)
+	_duration_spin.value = _level.match_duration
+	_water_spin.value = _level.water_level
+	_grass_pick.color = _level.grass_color
+	_sand_pick.color = _level.sand_color
+	_seabed_pick.color = _level.seabed_color
+	for c in [_duration_spin, _water_spin, _grass_pick, _sand_pick, _seabed_pick]:
+		(c as Node).set_block_signals(false)
 
 func _make_slider(label_text: String, min_v: float, max_v: float, step: float,
 		value: float, on_change: Callable) -> Control:

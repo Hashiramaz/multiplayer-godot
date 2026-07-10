@@ -69,6 +69,19 @@ Backlog completo de ideias no GDD (`docs/GDD.md`). Primeira fatia:
 - [ ] Área jogável (maré/lava) que diminui com o tempo, empurrando os jogadores
 - [ ] Sinergia com a câmera compartilhada (grupo forçado a se aproximar)
 
+## Fase 10 — Fases data-driven + editor de níveis  [x] (aguardando validação)
+Produzir fases em vez de uma arena fixa. Detalhes em `docs/ARCHITECTURE.md`.
+- [x] **A**: `LevelData`/`PlacedObject`/`ObjectDef` + autoload `LevelCatalog`; Arena
+  constrói a fase a partir de `selected_level` (arena atual vira a ilha padrão)
+- [x] **B**: `LevelSelect` entre Lobby e Arena (varre `res://levels` + ilha embutida)
+- [x] **C**: `LevelEditor` — câmera de editor + pincel de terreno (heightmap) +
+  salvar/abrir/testar + anel-Decal de raio/força
+- [x] **D**: editor de objetos — paleta do catálogo, colocar/mover/girar/apagar,
+  inspector de `props`, spawns; cenário Kenney (palmeira/pedra) com cor+colisão
+- [x] **E**: painel de propriedades (tempo, água, cores) + validação (spawn + barco)
+- [ ] **VALIDAR:** montar uma fase do zero, salvar, e jogá-la pela LevelSelect
+- [ ] (depois) mais elementos no catálogo; thumbnails; salvar em `user://` no build
+
 ---
 ### Status atual
 Fases 0–6 implementadas: core loop jogável de ponta a ponta — Menu → Lobby → Jogo

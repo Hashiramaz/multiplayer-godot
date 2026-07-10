@@ -17,9 +17,41 @@ Engine: **Godot 4.7**, Forward+, física **Jolt**. Linguagem: **GDScript** (TAB)
 ## Fluxo de cenas
 `MainMenu.tscn` (cena principal) → **Jogar** (`GameManager.go_to_lobby`, que limpa
 o roster) → `Lobby.tscn` (join por device) → **Start**
-(`GameManager.start_match`) → `Arena.tscn`, que lê `PlayerManager.registered_devices`
-e spawna um jogador por device. Abrir a Arena direto (sem ninguém registrado) cai num
-fallback de 1 jogador de teclado.
+(`GameManager.go_to_level_select`) → `LevelSelect.tscn` (escolhe a fase, grava em
+`GameManager.selected_level`) → **A/Enter** (`GameManager.start_match`) → `Arena.tscn`,
+que **constrói a fase** (ver abaixo) e spawna um jogador por device
+(`PlayerManager.registered_devices`). Abrir a Arena direto (sem nível/roster) cai num
+fallback de 1 jogador de teclado + ilha padrão. `MainMenu` também abre o
+**editor de níveis** (`GameManager.go_to_editor` → `LevelEditor.tscn`).
+
+## Fases como dados (LevelData)
+A Arena deixou de ter conteúdo fixo: uma fase é um **`Resource`** (o análogo do
+ScriptableObject) — `LevelData` (`scripts/levels/level_data.gd`) com terreno
+(heightmap `PackedFloat32Array` + tamanho/resolução/cores/nível da água), lista de
+`PlacedObject` (type_id + transform + `props`) e `spawn_points`. `arena.gd`:
+1. `Island/Terrain.build_from(level)` reconstrói o terreno (mesh + colisão);
+2. cada `PlacedObject` é instanciado via **`LevelCatalog`** (autoload que mapeia
+   `type_id → ObjectDef{cena, categoria, props editáveis}`), com transform + `props`
+   aplicados antes do `add_child` (pro `_ready` já ver os valores);
+3. cria `Marker3D` por spawn; 4. `MatchUI.configure(level)` liga o relógio e a
+   vitória — chamado **depois** de montar a fase, pois o `_ready` do MatchUI roda antes
+   do `_ready` da Arena (filhos inicializam antes dos pais).
+Adicionar um elemento novo ao jogo = uma cena + uma entrada no `LevelCatalog`.
+> ⚠️ `PackedFloat32Array` é copy-on-write: `island.heights` diverge de
+> `level.heights` ao esculpir. O editor re-sincroniza o terreno vivo de volta ao
+> `LevelData` no Salvar/Testar (`_sync_level_from_scene`).
+
+## Editor de níveis (LevelEditor)
+Ferramenta in-game **mouse+teclado** (`scripts/editor/level_editor.gd`), distinta do
+couch co-op. Câmera própria (`editor_camera.gd`: botão direito orbita, meio faz pan,
+roda dá zoom). Três modos: **Terreno** (pincel subir/descer/suavizar/nivelar sobre o
+heightmap, com anel-`Decal` projetado mostrando raio/força/modo; raycast contra o
+heightmap em `island.raycast`), **Objetos** (paleta do catálogo; colocar/selecionar/
+arrastar/girar Q-E/apagar Del; inspector das `props`; spawns), **Propriedades**
+(tempo, nível da água, cores). A árvore `$Objects` é o estado de trabalho, sincronizada
+para o `LevelData` no Salvar (`ResourceSaver` → `res://levels/*.tres`) / Testar.
+Validação exige ≥1 spawn e ≥1 barco. Cenário (Kenney nature kit) usa `scenery_prop.gd`
+para reaplicar o atlas `colormap.png` e gerar colisão trimesh.
 
 Menus (MainMenu/Pause) usam `Button` + o sistema de foco da Godot: navegáveis por
 teclado e D-pad. O `ui_accept` padrão não estava disparando com o **A** do controle
@@ -110,8 +142,11 @@ Modelo por **grupos + Area3D**, sem herança pesada:
   ignora input enquanto o estado é `RESULT`.
 
 ## Autoloads
-- `GameManager` — estado global (enum BOOT/MENU/LOBBY/PLAYING/PAUSED) + flow de
-  cena (`start_match`, `return_to_lobby`).
+- `GameManager` — estado global (enum BOOT/MENU/LOBBY/LEVEL_SELECT/EDITOR/PLAYING/
+  PAUSED/RESULT) + flow de cena (`go_to_lobby`, `go_to_level_select`, `go_to_editor`,
+  `start_match`) + `selected_level: LevelData` (a fase que a Arena vai montar).
+- `LevelCatalog` — registro de objetos colocáveis (`type_id → ObjectDef`); a Arena
+  e o editor instanciam conteúdo de fase por aqui. Novo elemento = 1 entrada.
 - `PlayerManager` — **fonte da verdade** do roster: `registered_devices`
   (device→slot em ordem de join), cores por slot, `join/leave` + sinais
   `player_joined/player_left`. Persiste na troca de cena.
