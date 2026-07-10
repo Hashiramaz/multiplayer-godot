@@ -1,21 +1,42 @@
 extends Node3D
 ## In-game level editor (mouse + keyboard, desktop-tool style). Edits a LevelData in
-## memory: sculpt the terrain heightmap with a brush, then Save it to res://levels so
-## it shows up in the level-select screen. Object placement and the level-properties
-## panel land in later phases; the tool-mode switch is already here to host them.
+## memory across three tool modes:
+##   - Terreno: sculpt the terrain heightmap with a brush.
+##   - Objetos: place / move / rotate / delete gameplay & scenery objects and spawns.
+##   - Propriedades: (Fase E) level-wide settings.
+## Save writes a .tres to res://levels so it shows up in the level-select screen.
+##
+## The scene under $Objects is the working state while editing; it's synced back into
+## the LevelData (objects + spawn_points) on Save / Test. Each item node carries meta
+## ("kind"/"type_id"/"props") so the sync is a straight read of the tree.
 ##
 ## Camera: right-drag orbit, middle-drag pan, wheel zoom (see editor_camera.gd).
-## Terrain brush: hold LEFT mouse over the terrain and drag.
 
 const LEVELS_DIR := "res://levels"
+## Where on the ring texture the visible outline sits (0 = center, 1 = edge). Decal
+## boxes are sized so this outline lands exactly at the intended world radius.
+const RING_POS := 0.9
+const MAX_SPAWNS := 4
+const PICK_RADIUS := 2.5      # world XZ distance to select an object by clicking near it
 
 var _level: LevelData
 var _tool_mode: String = "terrain"      # terrain | objects | properties
 
+# Terrain brush
 var _brush_mode: String = "raise"       # raise | lower | smooth | flatten
 var _brush_radius: float = 4.0
 var _brush_strength: float = 1.0
 var _painting: bool = false
+
+# Shared cursor raycast (terrain point under the mouse)
+var _cursor_hit: bool = false
+var _cursor_point: Vector3 = Vector3.ZERO
+
+# Object tool
+var _armed_type: String = ""            # "" = select/move; else type_id or "spawn"
+var _selected: Node3D = null
+var _dragging_obj: bool = false
+var _drag_offset: Vector3 = Vector3.ZERO  # selected.pos - cursor at grab, so it doesn't jump
 
 @onready var _terrain: Node = $Island/Terrain
 @onready var _camera: Camera3D = $EditorCamera
@@ -23,34 +44,291 @@ var _painting: bool = false
 @onready var _ui: CanvasLayer = $UI
 
 var _brush_decal: Decal
+var _select_decal: Decal
 
+# UI
 var _name_edit: LineEdit
 var _hint: Label
 var _terrain_panel: Control
+var _objects_panel: Control
+var _inspector_box: VBoxContainer
 var _placeholder: Label
 var _open_dialog: FileDialog
 
 func _ready() -> void:
 	GameManager.set_state(GameManager.State.EDITOR)
 	_level = LevelData.make_default_island()
-	_build_brush_decal()
+	_build_decals()
 	_build_ui()
 	_load_into_scene()
 
-## The projected brush ring: a Decal (conforms to the terrain silhouette on its own)
-## with a procedurally-drawn annulus texture. Inspired by the "telegraph decals"
-## look -- a ground marking that bends over hills to show reach.
-func _build_brush_decal() -> void:
-	_brush_decal = Decal.new()
-	_brush_decal.texture_albedo = _make_ring_texture()
-	_brush_decal.albedo_mix = 1.0
-	_brush_decal.upper_fade = 0.05
-	_brush_decal.lower_fade = 0.05
-	_brush_decal.visible = false
-	add_child(_brush_decal)
+# --- Level <-> scene ------------------------------------------------------------
 
-## Draws a soft annulus (bright outline at RING_POS + faint inner fill) as a white
-## RGBA texture; the ring color comes from the Decal's modulate at runtime.
+func _load_into_scene() -> void:
+	_terrain.build_from(_level)
+	_rebuild_scene_items()
+	_select(null)
+	_name_edit.text = _level.level_name
+	_set_hint("Fase carregada: %s" % _level.level_name)
+
+## Rebuilds the working tree ($Objects) from the LevelData: one node per placed
+## object (with meta for the sync) plus a marker per spawn point.
+func _rebuild_scene_items() -> void:
+	for child in _objects.get_children():
+		child.queue_free()
+	for o in _level.objects:
+		_instantiate_object(o.type_id, o.transform, o.props)
+	for i in _level.spawn_points.size():
+		_instantiate_spawn(_level.spawn_points[i], i)
+
+## Writes the working tree back into the LevelData. Called before Save / Test.
+func _sync_level_from_scene() -> void:
+	var objs: Array[PlacedObject] = []
+	var spawns: Array[Transform3D] = []
+	for node in _objects.get_children():
+		if String(node.get_meta("kind", "object")) == "spawn":
+			spawns.append((node as Node3D).transform)
+		else:
+			var po := PlacedObject.new()
+			po.type_id = String(node.get_meta("type_id", ""))
+			po.transform = (node as Node3D).transform
+			po.props = node.get_meta("props", {})
+			objs.append(po)
+	_level.objects = objs
+	_level.spawn_points = spawns
+
+func _instantiate_object(type_id: String, xform: Transform3D, props: Dictionary) -> Node3D:
+	var def := LevelCatalog.get_def(type_id)
+	if def == null or def.scene == null:
+		push_warning("LevelEditor: unknown type_id '%s'" % type_id)
+		return null
+	var node := def.scene.instantiate() as Node3D
+	node.transform = xform
+	for key in props:
+		node.set(key, props[key])
+	node.set_meta("kind", "object")
+	node.set_meta("type_id", type_id)
+	node.set_meta("props", props.duplicate())
+	_objects.add_child(node)
+	node.process_mode = Node.PROCESS_MODE_DISABLED   # static preview: no timers / area logic
+	return node
+
+func _instantiate_spawn(xform: Transform3D, index: int) -> Node3D:
+	var marker := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.55
+	cyl.bottom_radius = 0.55
+	cyl.height = 0.2
+	marker.mesh = cyl
+	var col := PlayerManager.color_for_slot(index)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(col.r, col.g, col.b, 0.75)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = 0.5
+	marker.material_override = mat
+	marker.transform = xform
+	marker.set_meta("kind", "spawn")
+	_objects.add_child(marker)
+	return marker
+
+# --- Input ----------------------------------------------------------------------
+
+func _unhandled_input(event: InputEvent) -> void:
+	match _tool_mode:
+		"terrain":
+			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+				_painting = event.pressed
+		"objects":
+			_objects_input(event)
+
+func _objects_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_raycast_cursor()
+			if not _cursor_hit:
+				return
+			if _armed_type != "":
+				_place_new(_armed_type, _cursor_point)
+			else:
+				var picked := _pick_object(_cursor_point)
+				_select(picked)
+				_dragging_obj = picked != null
+				if picked != null:
+					_drag_offset = picked.position - _cursor_point
+		else:
+			_dragging_obj = false
+	elif event is InputEventKey and event.pressed and not event.echo and _selected != null:
+		match event.keycode:
+			KEY_Q:
+				_rotate_selected(-15.0)
+			KEY_E:
+				_rotate_selected(15.0)
+			KEY_DELETE:
+				_delete_selected()
+
+func _process(delta: float) -> void:
+	# Guard against a release swallowed by the UI leaving us stuck.
+	if _painting and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_painting = false
+	match _tool_mode:
+		"terrain":
+			_process_terrain(delta)
+		"objects":
+			_process_objects()
+		_:
+			_brush_decal.visible = false
+			_select_decal.visible = false
+
+func _process_terrain(delta: float) -> void:
+	_select_decal.visible = false
+	_raycast_cursor()
+	_update_brush_decal()
+	if _painting and _cursor_hit:
+		_terrain.sculpt(_cursor_point, _brush_radius, _brush_strength * delta, _brush_mode)
+
+func _process_objects() -> void:
+	_raycast_cursor()
+	# Placement preview ring while a type is armed.
+	_brush_decal.visible = _cursor_hit and _armed_type != ""
+	if _brush_decal.visible:
+		var half := 1.2 / RING_POS
+		_brush_decal.size = Vector3(half * 2.0, 40.0, half * 2.0)
+		_brush_decal.global_position = _cursor_point + Vector3.UP * 8.0
+		_brush_decal.modulate = Color(0.9, 0.95, 1.0, 0.85)
+	# Drag the selected object along the terrain (offset-preserving, re-seated on ground).
+	if _dragging_obj and _cursor_hit and _selected != null:
+		var np := _cursor_point + _drag_offset
+		np.y = _terrain.height_at(np)
+		_selected.position = np
+	_update_select_decal()
+
+func _raycast_cursor() -> void:
+	var mouse := get_viewport().get_mouse_position()
+	var origin := _camera.project_ray_origin(mouse)
+	var dir := _camera.project_ray_normal(mouse)
+	var hit: Dictionary = _terrain.raycast(origin, dir)
+	_cursor_hit = hit.get("hit", false)
+	if _cursor_hit:
+		_cursor_point = hit["position"]
+
+# --- Object placement / selection -----------------------------------------------
+
+func _place_new(type_id: String, point: Vector3) -> void:
+	if type_id == "spawn":
+		if _count_spawns() >= MAX_SPAWNS:
+			_set_hint("Máximo de %d spawns" % MAX_SPAWNS)
+			return
+		var marker := _instantiate_spawn(Transform3D(Basis.IDENTITY, point), _count_spawns())
+		_select(marker)
+		return
+	var def := LevelCatalog.get_def(type_id)
+	if def == null:
+		return
+	var node := _instantiate_object(type_id, Transform3D(Basis.IDENTITY, point), _default_props(def))
+	_select(node)
+
+## Nearest object/spawn to a world point within PICK_RADIUS (XZ), or null.
+func _pick_object(point: Vector3) -> Node3D:
+	var best: Node3D = null
+	var best_d := PICK_RADIUS
+	for child in _objects.get_children():
+		var n := child as Node3D
+		var d := Vector2(n.position.x - point.x, n.position.z - point.z).length()
+		if d < best_d:
+			best_d = d
+			best = n
+	return best
+
+func _select(node: Node3D) -> void:
+	_selected = node
+	_refresh_inspector()
+
+func _rotate_selected(deg: float) -> void:
+	if _selected != null:
+		_selected.rotate_y(deg_to_rad(deg))
+
+func _delete_selected() -> void:
+	if _selected == null:
+		return
+	_selected.queue_free()
+	_selected = null
+	_refresh_inspector()
+
+func _count_spawns() -> int:
+	var n := 0
+	for child in _objects.get_children():
+		if String(child.get_meta("kind", "object")) == "spawn":
+			n += 1
+	return n
+
+func _default_props(def: ObjectDef) -> Dictionary:
+	var d := {}
+	for p in def.editable_props:
+		d[p["name"]] = p["default"]
+	return d
+
+func _arm(type_id: String) -> void:
+	_armed_type = type_id
+	if type_id == "":
+		_set_hint("Modo seleção: clique para selecionar, arraste para mover")
+	elif type_id == "spawn":
+		_set_hint("Colocando spawns (clique no terreno)")
+	else:
+		var def := LevelCatalog.get_def(type_id)
+		_set_hint("Colocando: %s" % (def.display_name if def else type_id))
+
+# --- Decals (brush ring + selection ring) ---------------------------------------
+
+func _build_decals() -> void:
+	var tex := _make_ring_texture()
+	_brush_decal = _make_decal(tex)
+	_select_decal = _make_decal(tex)
+
+func _make_decal(tex: ImageTexture) -> Decal:
+	var d := Decal.new()
+	d.texture_albedo = tex
+	d.albedo_mix = 1.0
+	d.upper_fade = 0.05
+	d.lower_fade = 0.05
+	d.visible = false
+	add_child(d)
+	return d
+
+func _update_brush_decal() -> void:
+	_brush_decal.visible = _cursor_hit
+	if not _cursor_hit:
+		return
+	var half := _brush_radius / RING_POS
+	_brush_decal.size = Vector3(half * 2.0, 40.0, half * 2.0)
+	_brush_decal.global_position = _cursor_point + Vector3.UP * 8.0
+	var base := _mode_color(_brush_mode)
+	var t := clampf((_brush_strength - 0.1) / 3.9, 0.0, 1.0)
+	var bright := lerpf(0.6, 1.15, t)
+	_brush_decal.modulate = Color(
+		minf(base.r * bright, 1.0),
+		minf(base.g * bright, 1.0),
+		minf(base.b * bright, 1.0),
+		lerpf(0.45, 1.0, t))
+
+func _update_select_decal() -> void:
+	if _selected == null:
+		_select_decal.visible = false
+		return
+	_select_decal.visible = true
+	_select_decal.size = Vector3(3.0, 40.0, 3.0)
+	_select_decal.global_position = _selected.global_position + Vector3.UP * 8.0
+	_select_decal.modulate = Color(1.0, 1.0, 1.0, 0.9)
+
+func _mode_color(mode: String) -> Color:
+	match mode:
+		"raise": return Color(0.35, 0.9, 0.4)   # green: building up
+		"lower": return Color(0.95, 0.4, 0.35)  # red: digging down
+		"smooth": return Color(0.4, 0.75, 1.0)  # blue
+		"flatten": return Color(1.0, 0.85, 0.3) # yellow
+	return Color.WHITE
+
 func _make_ring_texture() -> ImageTexture:
 	var s := 128
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
@@ -67,100 +345,16 @@ func _make_ring_texture() -> ImageTexture:
 			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
 	return ImageTexture.create_from_image(img)
 
-# --- Level <-> scene ------------------------------------------------------------
-
-func _load_into_scene() -> void:
-	_terrain.build_from(_level)
-	_rebuild_objects()
-	_name_edit.text = _level.level_name
-	_set_hint("Fase carregada: %s" % _level.level_name)
-
-## Static, non-interactive previews of the placed objects so the terrain isn't empty
-## while editing. (Full placement/selection comes in the next phase.)
-func _rebuild_objects() -> void:
-	for child in _objects.get_children():
-		child.queue_free()
-	for o in _level.objects:
-		var def := LevelCatalog.get_def(o.type_id)
-		if def == null or def.scene == null:
-			continue
-		var node := def.scene.instantiate()
-		(node as Node3D).transform = o.transform
-		for key in o.props:
-			node.set(key, o.props[key])
-		_objects.add_child(node)
-		(node as Node).process_mode = Node.PROCESS_MODE_DISABLED
-
-# --- Terrain brush --------------------------------------------------------------
-## Where on the ring texture the visible outline sits (0 = center, 1 = edge). The
-## decal box is sized so this outline lands exactly at the real sculpt radius.
-const RING_POS := 0.9
-
-var _brush_hit: bool = false
-var _brush_point: Vector3 = Vector3.ZERO
-
-func _unhandled_input(event: InputEvent) -> void:
-	if _tool_mode != "terrain":
-		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_painting = event.pressed
-
-func _process(delta: float) -> void:
-	# Guard against a release swallowed by the UI leaving us stuck painting.
-	if _painting and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		_painting = false
-	if _tool_mode != "terrain":
-		_brush_decal.visible = false
-		return
-	_raycast_brush()
-	_update_brush_decal()
-	if _painting and _brush_hit:
-		_terrain.sculpt(_brush_point, _brush_radius, _brush_strength * delta, _brush_mode)
-
-func _raycast_brush() -> void:
-	var mouse := get_viewport().get_mouse_position()
-	var origin := _camera.project_ray_origin(mouse)
-	var dir := _camera.project_ray_normal(mouse)
-	var hit: Dictionary = _terrain.raycast(origin, dir)
-	_brush_hit = hit.get("hit", false)
-	if _brush_hit:
-		_brush_point = hit["position"]
-
-## Positions and styles the projected brush ring: radius -> decal footprint,
-## strength -> ring opacity/brightness, brush mode -> hue. Follows the cursor even
-## when not painting so you can aim.
-func _update_brush_decal() -> void:
-	_brush_decal.visible = _brush_hit
-	if not _brush_hit:
-		return
-	var half := _brush_radius / RING_POS
-	_brush_decal.size = Vector3(half * 2.0, 40.0, half * 2.0)
-	_brush_decal.global_position = _brush_point + Vector3.UP * 8.0
-	var base := _mode_color(_brush_mode)
-	var t := clampf((_brush_strength - 0.1) / 3.9, 0.0, 1.0)
-	var bright := lerpf(0.6, 1.15, t)
-	_brush_decal.modulate = Color(
-		minf(base.r * bright, 1.0),
-		minf(base.g * bright, 1.0),
-		minf(base.b * bright, 1.0),
-		lerpf(0.45, 1.0, t))
-
-func _mode_color(mode: String) -> Color:
-	match mode:
-		"raise": return Color(0.35, 0.9, 0.4)   # green: building up
-		"lower": return Color(0.95, 0.4, 0.35)  # red: digging down
-		"smooth": return Color(0.4, 0.75, 1.0)  # blue
-		"flatten": return Color(1.0, 0.85, 0.3) # yellow
-	return Color.WHITE
-
-# --- Actions --------------------------------------------------------------------
+# --- Toolbar actions ------------------------------------------------------------
 
 func _on_new() -> void:
 	_level = LevelData.make_default_island()
 	_level.level_name = "Nova Fase"
+	_armed_type = ""
 	_load_into_scene()
 
 func _on_save() -> void:
+	_sync_level_from_scene()
 	_level.level_name = _name_edit.text.strip_edges()
 	if _level.level_name == "":
 		_level.level_name = "Nova Fase"
@@ -185,12 +379,23 @@ func _on_open_file(path: String) -> void:
 		_set_hint("Arquivo não é uma fase válida")
 
 func _on_test() -> void:
+	_sync_level_from_scene()
 	_level.level_name = _name_edit.text.strip_edges()
 	GameManager.selected_level = _level
 	GameManager.start_match()
 
 func _on_menu() -> void:
 	GameManager.go_to_main_menu()
+
+func _set_tool_mode(mode: String) -> void:
+	_tool_mode = mode
+	_terrain_panel.visible = mode == "terrain"
+	_objects_panel.visible = mode == "objects"
+	_placeholder.visible = mode == "properties"
+	if mode == "properties":
+		_placeholder.text = "Propriedades: em breve (Fase E)"
+	if mode == "objects":
+		_refresh_inspector()
 
 func _set_brush_mode(mode: String) -> void:
 	_brush_mode = mode
@@ -200,15 +405,6 @@ func _set_brush_radius(v: float) -> void:
 
 func _set_brush_strength(v: float) -> void:
 	_brush_strength = v
-
-func _set_tool_mode(mode: String) -> void:
-	_tool_mode = mode
-	_terrain_panel.visible = mode == "terrain"
-	_placeholder.visible = mode != "terrain"
-	if mode == "objects":
-		_placeholder.text = "Objetos: em breve (Fase D)"
-	elif mode == "properties":
-		_placeholder.text = "Propriedades: em breve (Fase E)"
 
 func _slugify(raw: String) -> String:
 	var out := ""
@@ -229,6 +425,7 @@ func _set_hint(text: String) -> void:
 func _build_ui() -> void:
 	_build_toolbar()
 	_build_terrain_panel()
+	_build_objects_panel()
 	_build_placeholder()
 	_build_hint()
 	_build_open_dialog()
@@ -293,6 +490,116 @@ func _build_terrain_panel() -> void:
 	help.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(help)
 
+func _build_objects_panel() -> void:
+	_objects_panel = PanelContainer.new()
+	_objects_panel.position = Vector2(8, 52)
+	_objects_panel.custom_minimum_size = Vector2(230, 0)
+	_ui.add_child(_objects_panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	_objects_panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "Objetos"
+	title.add_theme_font_size_override("font_size", 18)
+	box.add_child(title)
+
+	_add_button(box, "↖ Selecionar / Mover", _arm.bind(""))
+
+	_add_section_label(box, "Gameplay")
+	for def in LevelCatalog.defs("gameplay"):
+		_add_button(box, "+ %s" % def.display_name, _arm.bind(def.id))
+	_add_button(box, "+ Ponto de Spawn", _arm.bind("spawn"))
+
+	_add_section_label(box, "Cenário")
+	for def in LevelCatalog.defs("scenery"):
+		_add_button(box, "+ %s" % def.display_name, _arm.bind(def.id))
+
+	var help := Label.new()
+	help.text = "Clique: coloca/seleciona\nArraste: move  ·  Q/E: girar\nDel: apagar"
+	help.add_theme_font_size_override("font_size", 12)
+	help.modulate = Color(1, 1, 1, 0.7)
+	box.add_child(help)
+
+	_add_separator_h(box)
+	_add_section_label(box, "Seleção")
+	_inspector_box = VBoxContainer.new()
+	_inspector_box.add_theme_constant_override("separation", 4)
+	box.add_child(_inspector_box)
+
+func _refresh_inspector() -> void:
+	if _inspector_box == null:
+		return
+	for child in _inspector_box.get_children():
+		child.queue_free()
+	if _selected == null:
+		var none := Label.new()
+		none.text = "(nada selecionado)"
+		none.modulate = Color(1, 1, 1, 0.6)
+		_inspector_box.add_child(none)
+		return
+
+	var kind := String(_selected.get_meta("kind", "object"))
+	if kind == "spawn":
+		var l := Label.new()
+		l.text = "Ponto de spawn"
+		_inspector_box.add_child(l)
+		_add_button(_inspector_box, "Apagar (Del)", _delete_selected)
+		return
+
+	var type_id := String(_selected.get_meta("type_id", ""))
+	var def := LevelCatalog.get_def(type_id)
+	var title := Label.new()
+	title.text = def.display_name if def else type_id
+	_inspector_box.add_child(title)
+
+	var props: Dictionary = _selected.get_meta("props", {})
+	if def != null:
+		for p in def.editable_props:
+			_add_prop_field(_inspector_box, p, props)
+	_add_button(_inspector_box, "Apagar (Del)", _delete_selected)
+
+func _add_prop_field(parent: Node, prop: Dictionary, props: Dictionary) -> void:
+	var pname := String(prop["name"])
+	var ptype := String(prop["type"])
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = pname
+	label.custom_minimum_size = Vector2(110, 0)
+	row.add_child(label)
+	if ptype == "bool":
+		var cb := CheckBox.new()
+		cb.button_pressed = bool(props.get(pname, prop["default"]))
+		cb.toggled.connect(_on_prop_bool.bind(pname))
+		row.add_child(cb)
+	else:
+		var sb := SpinBox.new()
+		sb.step = 1.0 if ptype == "int" else 0.1
+		sb.min_value = 0.0
+		sb.max_value = 999.0
+		sb.value = float(props.get(pname, prop["default"]))
+		sb.value_changed.connect(_on_prop_num.bind(pname, ptype))
+		row.add_child(sb)
+	parent.add_child(row)
+
+func _on_prop_num(value: float, pname: String, ptype: String) -> void:
+	if _selected == null:
+		return
+	var v: Variant = int(value) if ptype == "int" else value
+	var props: Dictionary = _selected.get_meta("props", {})
+	props[pname] = v
+	_selected.set_meta("props", props)
+	_selected.set(pname, v)
+
+func _on_prop_bool(pressed: bool, pname: String) -> void:
+	if _selected == null:
+		return
+	var props: Dictionary = _selected.get_meta("props", {})
+	props[pname] = pressed
+	_selected.set_meta("props", props)
+	_selected.set(pname, pressed)
+
 func _build_placeholder() -> void:
 	_placeholder = Label.new()
 	_placeholder.position = Vector2(12, 56)
@@ -328,8 +635,17 @@ func _add_button(parent: Node, text: String, on_press: Callable) -> Button:
 	return b
 
 func _add_separator(parent: Node) -> void:
-	var sep := VSeparator.new()
-	parent.add_child(sep)
+	parent.add_child(VSeparator.new())
+
+func _add_separator_h(parent: Node) -> void:
+	parent.add_child(HSeparator.new())
+
+func _add_section_label(parent: Node, text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 13)
+	l.modulate = Color(0.7, 0.85, 1.0)
+	parent.add_child(l)
 
 func _make_slider(label_text: String, min_v: float, max_v: float, step: float,
 		value: float, on_change: Callable) -> Control:

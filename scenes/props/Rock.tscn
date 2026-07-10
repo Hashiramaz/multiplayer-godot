@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" uid="uid://dn52yaxxwtw87" path="res://Assets/Visual/Environment/rocks-b.fbx" id="1"]
+[ext_resource type="Script" path="res://scripts/props/scenery_prop.gd" id="2"]
+
+[node name="Rock" type="Node3D"]
+script = ExtResource("2")
+
+[node name="Model" parent="." instance=ExtResource("1")]

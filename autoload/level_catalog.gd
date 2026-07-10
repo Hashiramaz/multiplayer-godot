@@ -8,6 +8,8 @@ extends Node
 const _LOG_SCENE := preload("res://scenes/interactables/Carriable.tscn")
 const _SAWMILL_SCENE := preload("res://scenes/interactables/Sawmill.tscn")
 const _BOAT_SCENE := preload("res://scenes/interactables/BoatStation.tscn")
+const _PALM_SCENE := preload("res://scenes/props/Palm.tscn")
+const _ROCK_SCENE := preload("res://scenes/props/Rock.tscn")
 
 var _defs: Dictionary = {}
 var _order: Array[String] = []
@@ -20,6 +22,8 @@ func _ready() -> void:
 	_register(_def("boat", "Barco", "gameplay", _BOAT_SCENE, [
 		{"name": "required", "type": "int", "default": 4},
 	]))
+	_register(_def("palm", "Palmeira", "scenery", _PALM_SCENE))
+	_register(_def("rock", "Pedra", "scenery", _ROCK_SCENE))
 
 func _def(id: String, display_name: String, category: String, scene: PackedScene,
 		editable_props: Array = []) -> ObjectDef:
