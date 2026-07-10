@@ -21,3 +21,6 @@ mono_crash.*.json
 
 # Local MCP config (machine-specific absolute paths; recreate per machine)
 .mcp.json
+
+# Exported builds
+/build/
