@@ -12,6 +12,7 @@ const GRAVITY: float = 20.0
 const DROP_HEIGHT: float = 0.25 ## Rest height of a dropped item on the floor.
 
 var device: int = PlayerInput.DEVICE_NONE
+var player_color: Color = Color.WHITE
 var _input: PlayerInput
 var _carried: Node3D = null
 
@@ -29,12 +30,9 @@ func set_device(new_device: int) -> void:
 		_input.device = new_device
 
 func set_color(color: Color) -> void:
-	var body := pivot.get_node("Body") as MeshInstance3D
-	var mat := body.get_active_material(0)
-	if mat:
-		mat = mat.duplicate()
-		mat.albedo_color = color
-		body.material_override = mat
+	# Color choice for the penguin is deferred; just remember the slot color for
+	# now so a later pass (tint / team indicator / palette swap) can apply it.
+	player_color = color
 
 func _physics_process(delta: float) -> void:
 	var move := _input.get_move()

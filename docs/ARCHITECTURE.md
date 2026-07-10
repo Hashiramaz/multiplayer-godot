@@ -123,6 +123,21 @@ Modelo por **grupos + Area3D**, sem herança pesada:
 Quando/se formos para rede: Godot tem `MultiplayerAPI` +
 `MultiplayerSynchronizer`/`MultiplayerSpawner` nativos.
 
+## Visual / renderização
+- **Personagem:** modelo FBX de pinguim (Kenney-style, `Assets/Visual/Characters/Penguim/`)
+  instanciado sob `Player/Pivot/Model`. A cápsula de colisão, `HoldPoint` e
+  `InteractionArea` seguem iguais — só o visual mudou. Escala/rotação do `Model`
+  são ajustadas no editor (FBX costuma precisar). Cor por jogador está **adiada**
+  (`set_color` só guarda `player_color` por enquanto).
+- **Iluminação:** sol quente com sombra suave (`light_angular_distance`), ambiente
+  com **SSAO** e leve ajuste de contraste/saturação. Alimenta o pós-processo abaixo.
+- **Pós-processo (estilização):** `Assets/Visual/Shaders/posterize_outline.gdshader`
+  (spatial `unshaded`, lê depth/normal/screen — exige **Forward+**). Aplicado num
+  `QuadMesh` de tela cheia (`flip_faces`, `extra_cull_margin` alto) filho do
+  `Camera3D` (`CameraRig/Camera3D/PostProcess`). Faz outline (Sobel em depth+normal),
+  posterização, mapeamento pra paleta de 8 cores e dithering — tudo em uniforms
+  ajustáveis no material. Fonte: godotshaders.com.
+
 ## Decisões e pendências
 - Câmera **perspectiva** (não ortográfica) — mais natural/Overcooked. Trocável.
 - `DEBUG_ANY` é temporário; sai quando o join real entrar (Fase 3).

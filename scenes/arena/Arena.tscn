@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/interactables/Carriable.tscn" id="log"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
+[ext_resource type="Shader" path="res://Assets/Visual/Shaders/posterize_outline.gdshader" id="pp_shader"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 
@@ -17,7 +18,15 @@ sky_material = SubResource("sky_mat")
 background_mode = 2
 sky = SubResource("sky")
 ambient_light_source = 3
+ambient_light_energy = 1.1
 tonemap_mode = 2
+tonemap_white = 1.2
+ssao_enabled = true
+ssao_intensity = 2.5
+ssao_radius = 1.0
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.15
 
 [sub_resource type="BoxMesh" id="floor_mesh"]
 size = Vector3(40, 1, 40)
@@ -37,6 +46,23 @@ albedo_color = Color(0.7, 0.5, 0.3, 1)
 [sub_resource type="BoxShape3D" id="obs_shape"]
 size = Vector3(2, 1, 2)
 
+[sub_resource type="QuadMesh" id="pp_quad"]
+flip_faces = true
+size = Vector2(2, 2)
+
+[sub_resource type="ShaderMaterial" id="pp_mat"]
+shader = ExtResource("pp_shader")
+shader_parameter/zNear = 0.05
+shader_parameter/zFar = 100.0
+shader_parameter/enable_outline = true
+shader_parameter/outline_color = Color(0, 0, 0, 1)
+shader_parameter/outline_thickness = 1.5
+shader_parameter/enable_color_limit = true
+shader_parameter/color_levels = 8
+shader_parameter/enable_color_palette = true
+shader_parameter/enable_dithering = true
+shader_parameter/dither_strength = 0.15
+
 [node name="Arena" type="Node3D"]
 script = ExtResource("arena")
 player_scene = ExtResource("player_scene")
@@ -45,8 +71,11 @@ player_scene = ExtResource("player_scene")
 environment = SubResource("env")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.573, -0.819, 0, 0.819, 0.573, 0, 12, 0)
+transform = Transform3D(0.906, -0.24, 0.348, 0, 0.823, 0.568, -0.423, -0.515, 0.746, 0, 12, 0)
+light_color = Color(1, 0.957, 0.882, 1)
+light_energy = 1.35
 shadow_enabled = true
+light_angular_distance = 1.5
 
 [node name="Floor" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
@@ -111,6 +140,13 @@ camera_path = NodePath("Camera3D")
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 12, 12)
 fov = 45.0
+
+[node name="PostProcess" type="MeshInstance3D" parent="CameraRig/Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+extra_cull_margin = 16384.0
+cast_shadow = 0
+mesh = SubResource("pp_quad")
+surface_material_override/0 = SubResource("pp_mat")
 
 [node name="PauseMenu" parent="." instance=ExtResource("pause")]
 

@@ -50,7 +50,14 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] Estado RESULT no GameManager; pause fica silencioso durante o resultado
 - [ ] **VALIDAR:** ganhar (barco a tempo) e perder (deixar o tempo acabar)
 
-## Fase 7 — Tempero: terreno encolhendo (adiado)  [ ]
+## Fase 7 — Primeiro passe visual  [~] (aguardando validação)
+- [x] Personagem: pinguim FBX no lugar da cápsula (colisão/gameplay intactos)
+- [x] Iluminação: sol quente + sombra suave + SSAO + ajuste de contraste/saturação
+- [x] Pós-processo: shader outline + posterização + paleta + dithering (quad da câmera)
+- [ ] **VALIDAR/AFINAR:** escala e rotação do pinguim; parâmetros do shader; paleta
+- [ ] (depois) cor por jogador no pinguim; mais assets/estações temáticas
+
+## Fase 8 — Tempero: terreno encolhendo (adiado)  [ ]
 - [ ] Área jogável (maré/lava) que diminui com o tempo, empurrando os jogadores
 - [ ] Sinergia com a câmera compartilhada (grupo forçado a se aproximar)
 
