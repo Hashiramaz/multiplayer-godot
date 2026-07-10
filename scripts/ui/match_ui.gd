@@ -7,11 +7,11 @@ extends CanvasLayer
 ## clock too. The end-of-match freeze instead just disables the players, so the
 ## result screen's own buttons keep working without touching get_tree().paused.
 
-@export var match_duration: float = 90.0
 @export var low_time_warning: float = 15.0
 
 var _time_left: float = 0.0
 var _over: bool = false
+var _active: bool = false
 
 @onready var timer_label: Label = $HUD/TimerLabel
 @onready var result_panel: Control = $Result
@@ -19,8 +19,17 @@ var _over: bool = false
 @onready var replay_button: Button = $Result/VBox/Replay
 
 func _ready() -> void:
-	_time_left = match_duration
 	result_panel.visible = false
+	_update_timer_label()
+	replay_button.pressed.connect(_on_replay)
+	($Result/VBox/Menu as Button).pressed.connect(_on_menu)
+
+## Called by the Arena AFTER the level (and its boat) is built, so the countdown and
+## the win condition wire up against objects that now exist in the tree. This node's
+## own _ready runs before the Arena spawns content, hence the split.
+func configure(level: LevelData) -> void:
+	_time_left = level.match_duration
+	_active = true
 	_update_timer_label()
 
 	var boat := get_tree().get_first_node_in_group("station")
@@ -29,11 +38,8 @@ func _ready() -> void:
 	else:
 		push_warning("MatchUI: no station with a 'completed' signal found.")
 
-	replay_button.pressed.connect(_on_replay)
-	($Result/VBox/Menu as Button).pressed.connect(_on_menu)
-
 func _process(delta: float) -> void:
-	if _over:
+	if not _active or _over:
 		return
 	_time_left = maxf(_time_left - delta, 0.0)
 	_update_timer_label()

@@ -52,7 +52,7 @@ func _input(event: InputEvent) -> void:
 
 func _try_start() -> void:
 	if PlayerManager.slot_count() > 0:
-		GameManager.start_match()
+		GameManager.go_to_level_select()
 
 func _on_roster_changed(_slot: int, _device: int) -> void:
 	_refresh()

@@ -1,13 +1,10 @@
 [gd_scene format=3 uid="uid://chjyxevempp4r"]
 
 [ext_resource type="Script" uid="uid://0vmitq0pxrw3" path="res://scripts/arena/arena.gd" id="arena"]
-[ext_resource type="PackedScene" uid="uid://b4q8lqf808ayr" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
 [ext_resource type="Script" uid="uid://bfd6n20s3xl5e" path="res://scripts/camera/camera_rig.gd" id="cam"]
-[ext_resource type="PackedScene" uid="uid://dgfn40nirh4us" path="res://scenes/interactables/Carriable.tscn" id="log"]
 [ext_resource type="PackedScene" path="res://scenes/ui/MatchUI.tscn" id="match"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
-[ext_resource type="PackedScene" uid="uid://0f7aopcqkhmj" path="res://scenes/interactables/Sawmill.tscn" id="sawmill"]
 [ext_resource type="PackedScene" path="res://scenes/arena/Island.tscn" id="island"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
@@ -46,40 +43,7 @@ shadow_enabled = true
 
 [node name="SpawnPoints" type="Node3D" parent="." unique_id=1285029624]
 
-[node name="Spawn1" type="Marker3D" parent="SpawnPoints" unique_id=88858753]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.3, -2)
-
-[node name="Spawn2" type="Marker3D" parent="SpawnPoints" unique_id=809256096]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, -2)
-
-[node name="Spawn3" type="Marker3D" parent="SpawnPoints" unique_id=403719863]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.3, 2)
-
-[node name="Spawn4" type="Marker3D" parent="SpawnPoints" unique_id=1379563383]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, 2)
-
 [node name="Interactables" type="Node3D" parent="." unique_id=368089740]
-
-[node name="Boat" parent="Interactables" unique_id=671825567 instance=ExtResource("boat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 9)
-
-[node name="Sawmill" parent="Interactables" unique_id=365634286 instance=ExtResource("sawmill")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
-
-[node name="Log1" parent="Interactables" unique_id=1418720725 instance=ExtResource("log")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.25, -3)
-
-[node name="Log2" parent="Interactables" unique_id=1447245426 instance=ExtResource("log")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.25, -3)
-
-[node name="Log3" parent="Interactables" unique_id=437623961 instance=ExtResource("log")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.25, 3)
-
-[node name="Log4" parent="Interactables" unique_id=304567942 instance=ExtResource("log")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.25, 3)
-
-[node name="Log5" parent="Interactables" unique_id=1792895884 instance=ExtResource("log")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -6)
 
 [node name="Players" type="Node3D" parent="." unique_id=1696881897]
 

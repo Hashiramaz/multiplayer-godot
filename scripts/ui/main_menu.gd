@@ -5,8 +5,10 @@ extends Control
 func _ready() -> void:
 	GameManager.set_state(GameManager.State.MENU)
 	var play := $VBox/Play as Button
+	var editor := $VBox/Editor as Button
 	var quit := $VBox/Quit as Button
 	play.pressed.connect(GameManager.go_to_lobby)
+	editor.pressed.connect(GameManager.go_to_editor)
 	quit.pressed.connect(_on_quit)
 	play.grab_focus()
 

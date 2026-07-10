@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 GameManager="*res://autoload/game_manager.gd"
 PlayerManager="*res://autoload/player_manager.gd"
+LevelCatalog="*res://autoload/level_catalog.gd"
 
 [display]
 

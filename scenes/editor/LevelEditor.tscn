@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/editor/level_editor.gd" id="1_editor"]
+[ext_resource type="PackedScene" path="res://scenes/arena/Island.tscn" id="2_island"]
+[ext_resource type="Script" path="res://scripts/editor/editor_camera.gd" id="3_cam"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_energy = 1.1
+tonemap_mode = 2
+tonemap_white = 1.2
+ssao_enabled = true
+ssao_intensity = 2.5
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.15
+
+[node name="LevelEditor" type="Node3D"]
+script = ExtResource("1_editor")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.906, -0.24, 0.348, 0, 0.823, 0.568, -0.423, -0.515, 0.746, 0, 12, 0)
+light_color = Color(1, 0.957, 0.882, 1)
+light_energy = 1.35
+light_angular_distance = 1.5
+shadow_enabled = true
+
+[node name="Island" parent="." instance=ExtResource("2_island")]
+
+[node name="Objects" type="Node3D" parent="."]
+
+[node name="EditorCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0.7, 0, -0.7, 0.7, 0, 24, 24)
+fov = 50.0
+script = ExtResource("3_cam")
+
+[node name="UI" type="CanvasLayer" parent="."]
