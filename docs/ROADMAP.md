@@ -37,15 +37,18 @@ Legenda: [x] feito · [~] em andamento · [ ] pendente
 - [x] Arena povoada com 5 toras + o barco
 - [ ] **VALIDAR:** pegar tora, levar ao barco, ver as pranchas subindo até "BARCO PRONTO!"
 
-## Fase 5 — Menu → Lobby → Jogo + pause  [ ]
-- [ ] Menu principal navegável por controle
-- [ ] Transições de cena via GameManager; pause
+## Fase 5 — Menu → Lobby → Jogo + pause  [x] (aguardando validação)
+- [x] MainMenu (cena principal): Jogar / Sair, navegável por controle e teclado
+- [x] GameManager: go_to_main_menu / go_to_lobby (limpa roster) / start_match
+- [x] PauseMenu (CanvasLayer ALWAYS) na Arena: Start/Esc; Continuar/Lobby/Menu
+- [ ] **VALIDAR:** navegar Menu→Lobby→Jogo por controle; pausar e usar cada opção
 
 ## Fase 6 — Vertical slice temática  [ ]
 - [ ] Escolher temática (ver GDD) e montar 1 mini-desafio jogável
 
 ---
 ### Status atual
-Fases 0–4 implementadas. Primeira mecânica temática no ar: pegar toras e construir
-o barco ("Escape the Island"). **Próximo passo:** validar o loop pegar→entregar no
-F5; depois, Fase 5 (menu → lobby → jogo + pause) e um relógio de ameaça (vulcão/maré).
+Fases 0–5 implementadas: fluxo completo Menu → Lobby → Jogo + pause, com a mecânica
+de pegar toras e construir o barco ("Escape the Island"). **Próximo passo:** validar
+o fluxo no F5; depois, Fase 6 (vertical slice) e um relógio de ameaça (vulcão/maré)
+com condições de vitória/derrota.

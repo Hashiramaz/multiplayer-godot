@@ -15,10 +15,24 @@ Engine: **Godot 4.7**, Forward+, física **Jolt**. Linguagem: **GDScript** (TAB)
 | Tags/Layers | Grupos (`add_to_group`) e collision layers |
 
 ## Fluxo de cenas
-`Lobby.tscn` (cena principal) → jogadores dão join por device → **Start** chama
-`GameManager.start_match()` → troca para `Arena.tscn`, que lê
-`PlayerManager.registered_devices` e spawna um jogador por device. Abrir a Arena
-direto (sem ninguém registrado) cai num fallback de 1 jogador de teclado.
+`MainMenu.tscn` (cena principal) → **Jogar** (`GameManager.go_to_lobby`, que limpa
+o roster) → `Lobby.tscn` (join por device) → **Start**
+(`GameManager.start_match`) → `Arena.tscn`, que lê `PlayerManager.registered_devices`
+e spawna um jogador por device. Abrir a Arena direto (sem ninguém registrado) cai num
+fallback de 1 jogador de teclado.
+
+Menus (MainMenu/Pause) usam `Button` + o sistema de foco da Godot: navegáveis por
+teclado e D-pad. O `ui_accept` padrão não estava disparando com o **A** do controle
+aqui, então os scripts de menu fazem a ponte: no `_input`, `JOY_BUTTON_A` emite
+`pressed` no botão em foco (`gui_get_focus_owner`). No pause isso só vale enquanto
+pausado, pra não colidir com o A do gameplay.
+
+## Pause
+`PauseMenu.tscn` é um `CanvasLayer` com `process_mode = ALWAYS`, instanciado dentro da
+Arena. Ele segue recebendo input enquanto `get_tree().paused = true` congela o resto da
+árvore (players são PAUSABLE). Toggle: **Start** (gamepad) / **Esc** (teclado). Opções:
+Continuar (unpause), Voltar ao Lobby, Menu principal — sempre despausando antes de trocar
+de cena.
 
 ## Árvore de cena — Lobby
 ```

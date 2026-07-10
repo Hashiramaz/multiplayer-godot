@@ -1,10 +1,11 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena/arena.gd" id="arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="player_scene"]
 [ext_resource type="Script" path="res://scripts/camera/camera_rig.gd" id="cam"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/BoatStation.tscn" id="boat"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/Carriable.tscn" id="log"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="pause"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 
@@ -109,3 +110,5 @@ camera_path = NodePath("Camera3D")
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 12, 12)
 fov = 45.0
+
+[node name="PauseMenu" parent="." instance=ExtResource("pause")]

@@ -19,11 +19,12 @@ está fechada (candidatas no GDD); o foco atual é o protótipo de mecânicas.
   Sem MCP por enquanto (reavaliar depois).
 
 ## Como rodar
-Abrir o projeto na Godot 4.7 e apertar Play (F5). Cena principal atual:
-`scenes/lobby/Lobby.tscn` — tela de **join local**: cada dispositivo entra sozinho
-(**A/Enter** entra, **B/Esc** sai, **Start/Espaço** começa). Ao começar, troca para
-`scenes/arena/Arena.tscn`, que spawna um jogador por device registrado (movimento
-com analógico/WASD). Abrir a Arena direto cai num fallback de 1 jogador de teclado.
+Abrir o projeto na Godot 4.7 e apertar Play (F5). Fluxo:
+`MainMenu` → **Jogar** → `Lobby` (join local: **A/Enter** entra, **B/Esc** sai,
+**Start/Espaço** começa) → `Arena` (spawna 1 jogador por device; movimento com
+analógico/WASD, **A/E** pega/entrega tora no barco). Na Arena, **Start/Esc** = pause
+(Continuar / Voltar ao Lobby / Menu principal). Menus navegáveis por controle e teclado.
+Abrir a Arena direto cai num fallback de 1 jogador de teclado.
 
 ## Estrutura
 ```
