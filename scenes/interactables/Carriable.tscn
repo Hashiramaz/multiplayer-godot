@@ -1,27 +1,18 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dgfn40nirh4us"]
 
-[ext_resource type="Script" path="res://scripts/interactables/carriable.gd" id="1_carriable"]
-
-[sub_resource type="CylinderMesh" id="log_mesh"]
-top_radius = 0.22
-bottom_radius = 0.22
-height = 1.1
-
-[sub_resource type="StandardMaterial3D" id="log_mat"]
-albedo_color = Color(0.45, 0.29, 0.15, 1)
+[ext_resource type="Script" uid="uid://b33xy8y06eolk" path="res://scripts/interactables/carriable.gd" id="1_carriable"]
+[ext_resource type="PackedScene" uid="uid://hotealaf4x0p" path="res://Assets/Visual/Props/SM_tree-log-small/SM_tree-log-small.fbx" id="2_3rnbk"]
 
 [sub_resource type="CylinderShape3D" id="log_shape"]
-radius = 0.25
 height = 1.1
+radius = 0.25
 
-[node name="Carriable" type="Area3D"]
+[node name="Carriable" type="Area3D" unique_id=1678590649]
 script = ExtResource("1_carriable")
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
-mesh = SubResource("log_mesh")
-surface_material_override/0 = SubResource("log_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1404352280]
 transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
 shape = SubResource("log_shape")
+
+[node name="SM_tree-log-small" parent="." unique_id=2108235175 instance=ExtResource("2_3rnbk")]
+transform = Transform3D(1.68, 0, 0, 0, 1.68, 0, 0, 0, 1.68, 0, -0.17604384, 0)

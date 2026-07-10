@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://b4q8lqf808ayr"]
 
-[ext_resource type="Script" path="res://scripts/interactables/boat_station.gd" id="1_boat"]
+[ext_resource type="Script" uid="uid://brxfvfs0qk76j" path="res://scripts/interactables/boat_station.gd" id="1_boat"]
+[ext_resource type="PackedScene" uid="uid://bw6d0rt6bt1bk" path="res://Assets/Visual/Props/SM_boat-row-small/boat-row-small.fbx" id="2_gqy7s"]
 
 [sub_resource type="BoxShape3D" id="area_shape"]
 size = Vector3(4, 2, 3)
@@ -17,43 +18,47 @@ size = Vector3(0.3, 0.25, 1.6)
 [sub_resource type="StandardMaterial3D" id="plank_mat"]
 albedo_color = Color(0.6, 0.43, 0.25, 1)
 
-[node name="BoatStation" type="Area3D"]
+[node name="BoatStation" type="Area3D" unique_id=1369029792]
 script = ExtResource("1_boat")
 
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1164900506]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("area_shape")
 
-[node name="Base" type="MeshInstance3D" parent="."]
+[node name="boat-row-small" parent="." unique_id=1742197503 instance=ExtResource("2_gqy7s")]
+transform = Transform3D(-6.676139e-08, 0, -1.585309, 0, 1.2252463, 0, 1.5273224, 0, -6.929605e-08, -0.18234193, -0.24820547, 0)
+
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1282036301]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+visible = false
 mesh = SubResource("base_mesh")
 surface_material_override/0 = SubResource("base_mat")
 
-[node name="Planks" type="Node3D" parent="."]
+[node name="Planks" type="Node3D" parent="." unique_id=1762545522]
 
-[node name="Plank1" type="MeshInstance3D" parent="Planks"]
+[node name="Plank1" type="MeshInstance3D" parent="Planks" unique_id=1099789389]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 0.55, 0)
 mesh = SubResource("plank_mesh")
 surface_material_override/0 = SubResource("plank_mat")
 
-[node name="Plank2" type="MeshInstance3D" parent="Planks"]
+[node name="Plank2" type="MeshInstance3D" parent="Planks" unique_id=1162013514]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0.55, 0)
 mesh = SubResource("plank_mesh")
 surface_material_override/0 = SubResource("plank_mat")
 
-[node name="Plank3" type="MeshInstance3D" parent="Planks"]
+[node name="Plank3" type="MeshInstance3D" parent="Planks" unique_id=276684019]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.55, 0)
 mesh = SubResource("plank_mesh")
 surface_material_override/0 = SubResource("plank_mat")
 
-[node name="Plank4" type="MeshInstance3D" parent="Planks"]
+[node name="Plank4" type="MeshInstance3D" parent="Planks" unique_id=209870205]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 0.55, 0)
 mesh = SubResource("plank_mesh")
 surface_material_override/0 = SubResource("plank_mat")
 
-[node name="Progress" type="Label3D" parent="."]
+[node name="Progress" type="Label3D" parent="." unique_id=439404805]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
-billboard = 1
 pixel_size = 0.01
-font_size = 64
+billboard = 1
 text = "Barco  0/4"
+font_size = 64
