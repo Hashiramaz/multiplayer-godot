@@ -11,10 +11,21 @@ extends CharacterBody3D
 const GRAVITY: float = 20.0
 const DROP_HEIGHT: float = 0.25 ## Rest height of a dropped item on the floor.
 
+## Clipes de animação embutidos no FBX do pinguim (nomes vindos dos "takes" do FBX).
+const ANIM_IDLE := &"idle"
+const ANIM_WALK := &"walk"
+const ANIM_EAT := &"eat"
+## Velocidade planar (m/s) a partir da qual o pinguim troca idle -> walk.
+const WALK_ANIM_SPEED: float = 0.5
+## Crossfade entre clipes, em segundos.
+const ANIM_BLEND: float = 0.15
+
 var device: int = PlayerInput.DEVICE_NONE
 var player_color: Color = Color.WHITE
 var _input: PlayerInput
 var _carried: Node3D = null
+var _anim: AnimationPlayer = null
+var _playing_action: bool = false ## True enquanto uma ação one-shot (ex.: eat) toca.
 
 @onready var pivot: Node3D = $Pivot
 @onready var hold_point: Node3D = $Pivot/HoldPoint
@@ -23,6 +34,7 @@ var _carried: Node3D = null
 func _ready() -> void:
 	add_to_group("players")
 	_input = PlayerInput.new(device)
+	_setup_animations()
 
 func set_device(new_device: int) -> void:
 	device = new_device
@@ -49,6 +61,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_face_direction(dir, delta)
+	_update_locomotion_anim()
 
 	if _input.interact_just_pressed():
 		_interact()
@@ -98,6 +111,7 @@ func _try_pickup() -> void:
 	item.get_parent().remove_child(item)
 	hold_point.add_child(item)
 	item.transform = Transform3D.IDENTITY
+	_play_action(ANIM_EAT)
 
 func _deliver_or_drop() -> void:
 	var kind := ""
@@ -136,6 +150,59 @@ func _drop() -> void:
 	item.global_transform = Transform3D(Basis.IDENTITY, drop_pos)
 	if item.has_method("set_held"):
 		item.set_held(false)
+
+# --- Animation ------------------------------------------------------------
+# O FBX do pinguim traz um AnimationPlayer com os clipes (idle/walk/eat/...).
+# Em vez de fixar o caminho do nó, procuramos por ele: assim nada quebra se a
+# hierarquia do modelo importado mudar num reimport.
+
+func _setup_animations() -> void:
+	_anim = find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _anim == null:
+		push_warning("Player: AnimationPlayer não encontrado dentro do modelo do pinguim.")
+		return
+	# FBX não traz info de loop; definimos aqui. eat é one-shot (sem loop) para
+	# que 'animation_finished' dispare e a locomoção retome.
+	_set_loop(ANIM_IDLE, true)
+	_set_loop(ANIM_WALK, true)
+	_set_loop(ANIM_EAT, false)
+
+	var missing: Array = []
+	for a in [ANIM_IDLE, ANIM_WALK, ANIM_EAT]:
+		if not _anim.has_animation(a):
+			missing.append(a)
+	if not missing.is_empty():
+		push_warning("Player: clipes ausentes %s. Disponíveis: %s" % [missing, _anim.get_animation_list()])
+
+	_anim.animation_finished.connect(_on_animation_finished)
+	if _anim.has_animation(ANIM_IDLE):
+		_anim.play(ANIM_IDLE)
+
+func _set_loop(anim_name: StringName, looped: bool) -> void:
+	if not _anim.has_animation(anim_name):
+		return
+	_anim.get_animation(anim_name).loop_mode = Animation.LOOP_LINEAR if looped else Animation.LOOP_NONE
+
+## Escolhe idle vs walk pela velocidade no plano; não mexe enquanto uma ação toca.
+func _update_locomotion_anim() -> void:
+	if _anim == null or _playing_action:
+		return
+	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	var want := ANIM_WALK if planar_speed > WALK_ANIM_SPEED else ANIM_IDLE
+	if _anim.has_animation(want) and _anim.current_animation != want:
+		_anim.play(want, ANIM_BLEND)
+
+## Toca um clipe one-shot (ex.: eat) por cima da locomoção.
+func _play_action(anim_name: StringName) -> void:
+	if _anim == null or not _anim.has_animation(anim_name):
+		return
+	_playing_action = true
+	_anim.play(anim_name, ANIM_BLEND)
+
+func _on_animation_finished(anim_name: StringName) -> void:
+	if anim_name == ANIM_EAT:
+		# Locomoção volta a decidir idle/walk no próximo _physics_process.
+		_playing_action = false
 
 ## Nearest overlapping Area3D that belongs to `group` (carriables/stations are areas).
 func _nearest_in_group(group: String) -> Node3D:
