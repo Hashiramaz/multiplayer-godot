@@ -38,6 +38,14 @@ var _selected: Node3D = null
 var _dragging_obj: bool = false
 var _drag_offset: Vector3 = Vector3.ZERO  # selected.pos - cursor at grab, so it doesn't jump
 
+# Grid snap (authoring aid for Overcooked-style layout/balancing). Editor-only state:
+# it snaps X/Z to cell centers while Y keeps following the sculpted heightmap. Nothing
+# here is written into LevelData -- placed objects still store a plain Transform3D.
+var _snap_enabled: bool = false
+var _grid_size: float = 2.0
+var _grid_decal: Decal
+var _grid_divisions: int = 0      # cached; the grid texture is rebuilt when this changes
+
 @onready var _terrain: Node = $Island/Terrain
 @onready var _camera: Camera3D = $EditorCamera
 @onready var _objects: Node3D = $Objects
@@ -167,7 +175,7 @@ func _objects_input(event: InputEvent) -> void:
 			if not _cursor_hit:
 				return
 			if _armed_type != "":
-				_place_new(_armed_type, _cursor_point)
+				_place_new(_armed_type, _snap_xz(_cursor_point))
 			else:
 				var picked := _pick_object(_cursor_point)
 				_select(picked)
@@ -175,6 +183,8 @@ func _objects_input(event: InputEvent) -> void:
 				if picked != null:
 					_drag_offset = picked.position - _cursor_point
 		else:
+			if _dragging_obj:
+				_refresh_inspector()   # update the cell readout after a move
 			_dragging_obj = false
 	elif event is InputEventKey and event.pressed and not event.echo and _selected != null:
 		match event.keycode:
@@ -197,9 +207,11 @@ func _process(delta: float) -> void:
 		_:
 			_brush_decal.visible = false
 			_select_decal.visible = false
+			_grid_decal.visible = false
 
 func _process_terrain(delta: float) -> void:
 	_select_decal.visible = false
+	_grid_decal.visible = false
 	_raycast_cursor()
 	_update_brush_decal()
 	if _painting and _cursor_hit:
@@ -207,19 +219,32 @@ func _process_terrain(delta: float) -> void:
 
 func _process_objects() -> void:
 	_raycast_cursor()
-	# Placement preview ring while a type is armed.
+	_update_grid_decal()
+	# Placement preview ring while a type is armed -- snapped so it shows the target cell.
 	_brush_decal.visible = _cursor_hit and _armed_type != ""
 	if _brush_decal.visible:
 		var half := 1.2 / RING_POS
 		_brush_decal.size = Vector3(half * 2.0, 40.0, half * 2.0)
-		_brush_decal.global_position = _cursor_point + Vector3.UP * 8.0
+		_brush_decal.global_position = _snap_xz(_cursor_point) + Vector3.UP * 8.0
 		_brush_decal.modulate = Color(0.9, 0.95, 1.0, 0.85)
-	# Drag the selected object along the terrain (offset-preserving, re-seated on ground).
+	# Drag the selected object along the terrain, re-seated on ground. With snap on we
+	# drive straight from the (snapped) cursor cell; otherwise keep the grab offset so
+	# free dragging doesn't jump.
 	if _dragging_obj and _cursor_hit and _selected != null:
-		var np := _cursor_point + _drag_offset
+		var np := _snap_xz(_cursor_point) if _snap_enabled else _cursor_point + _drag_offset
 		np.y = _terrain.height_at(np)
 		_selected.position = np
 	_update_select_decal()
+
+## Quantize a world point's X/Z to grid cell centers, leaving Y untouched (callers
+## re-seat it on the terrain). A no-op when snapping is off, so free placement still
+## works exactly as before. Cell centers sit between the overlay's grid lines.
+func _snap_xz(p: Vector3) -> Vector3:
+	if not _snap_enabled:
+		return p
+	var gx := (floorf(p.x / _grid_size) + 0.5) * _grid_size
+	var gz := (floorf(p.z / _grid_size) + 0.5) * _grid_size
+	return Vector3(gx, p.y, gz)
 
 func _raycast_cursor() -> void:
 	var mouse := get_viewport().get_mouse_position()
@@ -233,6 +258,7 @@ func _raycast_cursor() -> void:
 # --- Object placement / selection -----------------------------------------------
 
 func _place_new(type_id: String, point: Vector3) -> void:
+	point.y = _terrain.height_at(point)   # re-seat on the surface at the (snapped) X/Z
 	if type_id == "spawn":
 		if _count_spawns() >= MAX_SPAWNS:
 			_set_hint("Máximo de %d spawns" % MAX_SPAWNS)
@@ -286,6 +312,14 @@ func _default_props(def: ObjectDef) -> Dictionary:
 		d[p["name"]] = p["default"]
 	return d
 
+func _toggle_snap(on: bool) -> void:
+	_snap_enabled = on
+	_set_hint("Grade %s" % ("ligada" if on else "desligada"))
+
+func _set_grid_size(v: float) -> void:
+	_grid_size = v
+	_grid_divisions = 0   # force the overlay texture to rebuild at the new cell count
+
 func _arm(type_id: String) -> void:
 	_armed_type = type_id
 	if type_id == "":
@@ -302,6 +336,10 @@ func _build_decals() -> void:
 	var tex := _make_ring_texture()
 	_brush_decal = _make_decal(tex)
 	_select_decal = _make_decal(tex)
+	# The grid overlay drapes over the terrain (decals project straight down), so it
+	# reads correctly even on a sculpted heightmap. Rebuilt lazily in _update_grid_decal.
+	_grid_decal = _make_decal(_make_ring_texture())
+	_grid_decal.albedo_mix = 0.9
 
 func _make_decal(tex: ImageTexture) -> Decal:
 	var d := Decal.new()
@@ -328,6 +366,34 @@ func _update_brush_decal() -> void:
 		minf(base.g * bright, 1.0),
 		minf(base.b * bright, 1.0),
 		lerpf(0.45, 1.0, t))
+
+func _update_grid_decal() -> void:
+	_grid_decal.visible = _snap_enabled
+	if not _snap_enabled:
+		return
+	var terrain_size: float = _terrain.size
+	var divisions: int = maxi(1, int(round(terrain_size / _grid_size)))
+	if divisions != _grid_divisions:
+		_grid_divisions = divisions
+		_grid_decal.texture_albedo = _make_grid_texture(divisions)
+	_grid_decal.size = Vector3(terrain_size, 40.0, terrain_size)
+	_grid_decal.global_position = Vector3(0.0, 8.0, 0.0)   # centered over the terrain
+	_grid_decal.modulate = Color(0.6, 0.85, 1.0, 0.5)
+
+## A square grid of thin lines (transparent cells) that the overlay decal projects onto
+## the terrain. `divisions` = terrain_size / grid_size, so the lines land on world
+## multiples of grid_size and objects snap to the cell centers between them.
+func _make_grid_texture(divisions: int) -> ImageTexture:
+	var s := 512
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1.0, 1.0, 1.0, 0.0))
+	var line := Color(1.0, 1.0, 1.0, 1.0)
+	for i in range(divisions + 1):
+		var c := clampi(int(round(float(i) / float(divisions) * float(s - 1))), 0, s - 1)
+		for t in range(s):
+			img.set_pixel(c, t, line)   # vertical grid line
+			img.set_pixel(t, c, line)   # horizontal grid line
+	return ImageTexture.create_from_image(img)
 
 func _update_select_decal() -> void:
 	if _selected == null:
@@ -544,6 +610,14 @@ func _build_objects_panel() -> void:
 
 	_add_button(box, "↖ Selecionar / Mover", _arm.bind(""))
 
+	_add_section_label(box, "Grade")
+	var snap_toggle := CheckButton.new()
+	snap_toggle.text = "Encaixar na grade"
+	snap_toggle.button_pressed = _snap_enabled
+	snap_toggle.toggled.connect(_toggle_snap)
+	box.add_child(snap_toggle)
+	box.add_child(_make_slider("Célula", 0.5, 4.0, 0.5, _grid_size, _set_grid_size))
+
 	_add_section_label(box, "Gameplay")
 	for def in LevelCatalog.defs("gameplay"):
 		_add_button(box, "+ %s" % def.display_name, _arm.bind(def.id))
@@ -582,6 +656,7 @@ func _refresh_inspector() -> void:
 		var l := Label.new()
 		l.text = "Ponto de spawn"
 		_inspector_box.add_child(l)
+		_add_cell_label(_inspector_box)
 		_add_button(_inspector_box, "Apagar (Del)", _delete_selected)
 		return
 
@@ -590,12 +665,26 @@ func _refresh_inspector() -> void:
 	var title := Label.new()
 	title.text = def.display_name if def else type_id
 	_inspector_box.add_child(title)
+	_add_cell_label(_inspector_box)
 
 	var props: Dictionary = _selected.get_meta("props", {})
 	if def != null:
 		for p in def.editable_props:
 			_add_prop_field(_inspector_box, p, props)
 	_add_button(_inspector_box, "Apagar (Del)", _delete_selected)
+
+## Grid cell of the selected item (floor of position / grid_size), for spacing/balance
+## reference. Shown even with snap off so you can read where a free-placed object sits.
+func _add_cell_label(parent: Node) -> void:
+	if _selected == null:
+		return
+	var cx := floori(_selected.position.x / _grid_size)
+	var cz := floori(_selected.position.z / _grid_size)
+	var l := Label.new()
+	l.text = "Célula: (%d, %d)" % [cx, cz]
+	l.add_theme_font_size_override("font_size", 12)
+	l.modulate = Color(0.7, 0.85, 1.0)
+	parent.add_child(l)
 
 func _add_prop_field(parent: Node, prop: Dictionary, props: Dictionary) -> void:
 	var pname := String(prop["name"])

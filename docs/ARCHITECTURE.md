@@ -48,6 +48,11 @@ roda dá zoom). Três modos: **Terreno** (pincel subir/descer/suavizar/nivelar s
 heightmap, com anel-`Decal` projetado mostrando raio/força/modo; raycast contra o
 heightmap em `island.raycast`), **Objetos** (paleta do catálogo; colocar/selecionar/
 arrastar/girar Q-E/apagar Del; inspector das `props`; spawns), **Propriedades**
+> Modo Objetos tem **encaixe na grade** opcional (ajuda de autoria estilo Overcooked,
+> pra layout/balanceamento): um toggle + tamanho de célula quantizam X/Z ao centro da
+> célula (Y segue o heightmap), com overlay de grade via `Decal` projetado e leitura da
+> célula `(cx, cz)` no inspector. É **estado só do editor** — nada disso vai pro
+> `LevelData`; o objeto continua guardando um `Transform3D` comum (`_snap_xz`).
 (tempo, nível da água, cores). A árvore `$Objects` é o estado de trabalho, sincronizada
 para o `LevelData` no Salvar (`ResourceSaver` → `res://levels/*.tres`) / Testar.
 Validação exige ≥1 spawn e ≥1 barco. Cenário (Kenney nature kit) usa `scenery_prop.gd`
