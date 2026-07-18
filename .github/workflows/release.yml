@@ -47,15 +47,32 @@ jobs:
       - name: Build (import + export)
         shell: pwsh
         run: |
-          $console = Get-ChildItem "$env:USERPROFILE\godot" -Recurse -Filter "*_console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-          if (-not $console) { throw "Godot console exe nao encontrado em $env:USERPROFILE\godot" }
-          Write-Host "Godot console: $console"
+          # Resolve the `godot` alias to the real exe (it's a symlink), then prefer the
+          # *_console.exe sibling (console subsystem: `&` blocks + prints). If there's
+          # no console build, fall back to Start-Process -Wait on the GUI exe (which
+          # pwsh otherwise wouldn't wait for -- that was the empty-build bug).
+          $src = (Get-Command godot).Source
+          $it = Get-Item $src
+          $real = $src
+          if ($it.Target) { $real = @($it.Target)[0]; if (-not [IO.Path]::IsPathRooted($real)) { $real = Join-Path (Split-Path $src) $real } }
+          $dir = Split-Path $real
+          $console = Get-ChildItem $dir -Filter "*_console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "godot real: $real"
+          Write-Host "godot console: $console"
           New-Item -ItemType Directory -Force -Path build/windows | Out-Null
-          Write-Host "== Import =="
-          & $console --headless --import
-          Write-Host "== Export =="
-          & $console --headless --export-release "${{ env.EXPORT_PRESET }}" "build/windows/${{ env.EXE_NAME }}"
-          Write-Host "Godot exit code: $LASTEXITCODE"
+          function Run-Godot($tag, [string[]]$a) {
+            Write-Host "== $tag =="
+            if ($console) {
+              & $console @a
+              Write-Host "$tag exit: $LASTEXITCODE"
+            } else {
+              $p = Start-Process -FilePath $real -ArgumentList $a -Wait -NoNewWindow -PassThru -RedirectStandardOutput "gd_$tag.out" -RedirectStandardError "gd_$tag.err"
+              Get-Content "gd_$tag.out","gd_$tag.err" -ErrorAction SilentlyContinue
+              Write-Host "$tag exit: $($p.ExitCode)"
+            }
+          }
+          Run-Godot "import" @('--headless','--import')
+          Run-Godot "export" @('--headless','--export-release',"${{ env.EXPORT_PRESET }}","build/windows/${{ env.EXE_NAME }}")
           if (-not (Test-Path "build/windows/${{ env.EXE_NAME }}")) { throw "Export nao gerou o .exe" }
           Write-Host ("OK: {0:N0} bytes" -f (Get-Item "build/windows/${{ env.EXE_NAME }}").Length)
 
