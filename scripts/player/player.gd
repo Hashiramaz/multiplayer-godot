@@ -33,6 +33,13 @@ var _playing_action: bool = false ## True enquanto uma ação one-shot (ex.: eat
 
 func _ready() -> void:
 	add_to_group("players")
+	# Online: the node is named after its owning peer id (set by the spawn RPC), so
+	# every machine agrees on who controls this penguin. That peer reads local input;
+	# the others just apply synced state. Offline (couch), authority stays 1 and every
+	# player runs its own input as before.
+	if NetworkManager.is_online:
+		set_multiplayer_authority(str(name).to_int())
+		device = PlayerInput.DEVICE_LOCAL
 	_input = PlayerInput.new(device)
 	_setup_animations()
 
@@ -47,6 +54,13 @@ func set_color(color: Color) -> void:
 	player_color = color
 
 func _physics_process(delta: float) -> void:
+	# Remote players (not our authority) are driven by _remote_state; we only keep
+	# their locomotion animation alive from the synced velocity. is_multiplayer_authority()
+	# is true for everyone in offline couch mode, so this is a no-op there.
+	if not is_multiplayer_authority():
+		_update_locomotion_anim()
+		return
+
 	var move := _input.get_move()
 	var dir := _world_direction(move)
 
@@ -65,6 +79,20 @@ func _physics_process(delta: float) -> void:
 
 	if _input.interact_just_pressed():
 		_interact()
+
+	if NetworkManager.is_online:
+		_remote_state.rpc(global_position, pivot.rotation.y, velocity)
+
+# --- Networking (movement sync) -------------------------------------------
+# Client-authoritative movement: the owner simulates its penguin and pushes the
+# result to everyone else each physics frame (unreliable -- newest wins). Cheap and
+# fine for co-op with a handful of players; interactions get proper authority in O3.
+
+@rpc("authority", "unreliable_ordered")
+func _remote_state(pos: Vector3, pivot_yaw: float, vel: Vector3) -> void:
+	global_position = pos
+	pivot.rotation.y = pivot_yaw
+	velocity = vel
 
 # --- Movement -------------------------------------------------------------
 
@@ -96,11 +124,61 @@ func _face_direction(dir: Vector3, delta: float) -> void:
 
 # --- Interaction ----------------------------------------------------------
 
+## Offline: act immediately. Online: the world is the host's call, so we either
+## decide (we ARE the host) or just send the intent and wait for the broadcast.
 func _interact() -> void:
+	if not NetworkManager.is_online:
+		_local_interact()
+	elif multiplayer.is_server():
+		_host_interact()
+	else:
+		_req_interact.rpc_id(1)
+
+func _local_interact() -> void:
 	if _carried == null:
 		_try_pickup()
 	else:
 		_deliver_or_drop()
+
+## Client -> host: "I pressed interact." The host re-runs the decision on ITS copy of
+## this penguin -- positions are synced, so it sees the same items in range.
+@rpc("any_peer", "reliable")
+func _req_interact() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != get_multiplayer_authority():
+		return # only this penguin's owner may drive it
+	_host_interact()
+
+## Runs on the host only: decide what happens, then let the Arena broadcast it.
+func _host_interact() -> void:
+	var arena := get_tree().current_scene
+	if arena == null or not arena.has_method("host_pickup"):
+		return
+	if _carried == null:
+		var item := _nearest_in_group("carriable")
+		if item != null:
+			arena.host_pickup(str(name), str(item.name))
+		return
+	var station := _nearest_station_for(_carried_kind())
+	if station != null:
+		arena.host_deliver(str(name), str(_carried.name), str(station.name))
+	else:
+		arena.host_drop(str(name), str(_carried.name), _drop_transform())
+
+# Applied on EVERY peer from the host's decision (see arena.gd's _net_* RPCs).
+
+func net_attach(item: Node3D) -> void:
+	_carried = item
+	if item.has_method("set_held"):
+		item.set_held(true)
+	item.reparent(hold_point)
+	item.transform = Transform3D.IDENTITY
+	_play_action(ANIM_EAT)
+
+## Just forget what we're holding; the caller decides where the item goes next.
+func net_release() -> void:
+	_carried = null
 
 func _try_pickup() -> void:
 	var item := _nearest_in_group("carriable")
@@ -113,11 +191,13 @@ func _try_pickup() -> void:
 	item.transform = Transform3D.IDENTITY
 	_play_action(ANIM_EAT)
 
+func _carried_kind() -> String:
+	if _carried != null and _carried.has_method("get_kind"):
+		return str(_carried.get_kind())
+	return ""
+
 func _deliver_or_drop() -> void:
-	var kind := ""
-	if _carried.has_method("get_kind"):
-		kind = str(_carried.get_kind())
-	var station := _nearest_station_for(kind)
+	var station := _nearest_station_for(_carried_kind())
 	# The station consumes the carried item itself; we just let go of it.
 	if station != null and station.submit(_carried):
 		_carried = null
@@ -139,15 +219,19 @@ func _nearest_station_for(kind: String) -> Node3D:
 			best = area
 	return best
 
+## Where a dropped item lands: just in front of the penguin, resting on the floor.
+func _drop_transform() -> Transform3D:
+	var forward := -pivot.global_transform.basis.z
+	var drop_pos := global_position + forward * 0.9
+	drop_pos.y = DROP_HEIGHT
+	return Transform3D(Basis.IDENTITY, drop_pos)
+
 func _drop() -> void:
 	var item := _carried
 	_carried = null
 	hold_point.remove_child(item)
 	get_tree().current_scene.add_child(item)
-	var forward := -pivot.global_transform.basis.z
-	var drop_pos := global_position + forward * 0.9
-	drop_pos.y = DROP_HEIGHT
-	item.global_transform = Transform3D(Basis.IDENTITY, drop_pos)
+	item.global_transform = _drop_transform()
 	if item.has_method("set_held"):
 		item.set_held(false)
 

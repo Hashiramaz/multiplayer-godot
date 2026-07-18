@@ -1,0 +1,23 @@
+COLOQUE AQUI: GodotSteam (versão GDExtension, para Godot 4.7 / Windows)
+========================================================================
+
+O que baixar:
+  godotsteam.com -> Download -> pacote "GDExtension" (NÃO o "Module/editor
+  precompilado"). Alternativa: GitHub CoaguCo-Industries/GodotSteam, release da 4.7.
+
+Como saber se baixou o certo:
+  O zip deve conter uma pasta "addons/godotsteam/" com, dentro dela:
+    - godotsteam.gdextension   (arquivo de texto que registra a extensão)
+    - arquivos .dll do win64 (ex.: libgodotsteam.windows.*.dll)
+    - steam_api64.dll
+  Se em vez disso o zip tiver um Godot.exe inteiro dentro, é a versão errada
+  (editor precompilado) -- baixe a "GDExtension".
+
+Onde extrair:
+  Extraia de modo que os arquivos acima caiam JÁ NESTA PASTA
+  (d:\GodotProjects\multiplayer-project\addons\godotsteam\).
+  Se o zip trouxer "addons/godotsteam/..." dentro, extraia na RAIZ do projeto
+  que ele funde certinho aqui. Pode apagar este LEIA-ME depois.
+
+Depois de extrair: feche e reabra a Godot (GDExtension carrega no boot; não
+precisa habilitar em Projeto -> Plugins).

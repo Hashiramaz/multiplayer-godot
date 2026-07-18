@@ -2,9 +2,10 @@ extends Node
 ## Global game state + high-level scene flow (autoload / singleton, like a Unity
 ## manager). Flow: MainMenu -> Lobby -> Arena, with in-match pause.
 
-enum State { BOOT, MENU, LOBBY, LEVEL_SELECT, EDITOR, PLAYING, PAUSED, RESULT }
+enum State { BOOT, MENU, ONLINE, LOBBY, LEVEL_SELECT, EDITOR, PLAYING, PAUSED, RESULT }
 
 const MAIN_MENU_SCENE: String = "res://scenes/menu/MainMenu.tscn"
+const ONLINE_MENU_SCENE: String = "res://scenes/menu/OnlineMenu.tscn"
 const LOBBY_SCENE: String = "res://scenes/lobby/Lobby.tscn"
 const LEVEL_SELECT_SCENE: String = "res://scenes/levels/LevelSelect.tscn"
 const EDITOR_SCENE: String = "res://scenes/editor/LevelEditor.tscn"
@@ -22,6 +23,10 @@ func set_state(new_state: State) -> void:
 func go_to_main_menu() -> void:
 	set_state(State.MENU)
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+func go_to_online() -> void:
+	set_state(State.ONLINE)
+	get_tree().change_scene_to_file(ONLINE_MENU_SCENE)
 
 func go_to_lobby() -> void:
 	# Fresh lobby each time: clear who joined last session.

@@ -5,11 +5,14 @@ extends RefCounted
 ##
 ##   device >= 0             -> that specific gamepad
 ##   device == -1 (KEYBOARD) -> keyboard (WASD / arrows)
+##   device == -2 (LOCAL)    -> keyboard + gamepad 0 merged (online: 1 player/machine)
 ##   device == -99 (NONE)    -> reads nothing (stationary / not-yet-assigned)
 ##
-## A future online layer would feed remote input through this same seam.
+## Online layer: each machine's own player uses DEVICE_LOCAL; remote players are
+## driven by synced state, not by reading input here.
 
 const DEVICE_KEYBOARD: int = -1
+const DEVICE_LOCAL: int = -2
 const DEVICE_NONE: int = -99
 const DEADZONE: float = 0.2
 
@@ -28,8 +31,17 @@ func get_move() -> Vector2:
 			return Vector2.ZERO
 		DEVICE_KEYBOARD:
 			return _keyboard_vector()
+		DEVICE_LOCAL:
+			return _local_vector()
 		_:
 			return _pad_vector(device)
+
+## Online single-player-per-machine: keyboard wins if touched, else gamepad 0.
+func _local_vector() -> Vector2:
+	var k := _keyboard_vector()
+	if k != Vector2.ZERO:
+		return k
+	return _pad_vector(0)
 
 func _keyboard_vector() -> Vector2:
 	var v := Vector2.ZERO
@@ -66,5 +78,8 @@ func _interact_down() -> bool:
 			return false
 		DEVICE_KEYBOARD:
 			return Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE)
+		DEVICE_LOCAL:
+			return Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE) \
+				or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
 		_:
 			return Input.is_joy_button_pressed(device, JOY_BUTTON_A)

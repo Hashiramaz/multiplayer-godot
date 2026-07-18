@@ -1,0 +1,137 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/online_menu.gd" id="1_online"]
+
+[node name="OnlineMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_online")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.07, 0.11, 0.14, 1)
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -290.0
+offset_right = 260.0
+offset_bottom = 290.0
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 44
+text = "Online"
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Steam: ..."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="HostButton" type="Button" parent="VBox/Actions"]
+custom_minimum_size = Vector2(220, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Hospedar"
+
+[node name="RefreshButton" type="Button" parent="VBox/Actions"]
+custom_minimum_size = Vector2(220, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Procurar partidas"
+
+[node name="LobbyScroll" type="ScrollContainer" parent="VBox"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="LobbyList" type="VBoxContainer" parent="VBox/LobbyScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="JoinRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="LobbyInput" type="LineEdit" parent="VBox/JoinRow"]
+custom_minimum_size = Vector2(220, 36)
+layout_mode = 2
+placeholder_text = "ou cole um ID de lobby"
+alignment = 1
+
+[node name="JoinButton" type="Button" parent="VBox/JoinRow"]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Entrar"
+
+[node name="LobbyIdLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="PeersLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="FriendsLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Amigos online"
+horizontal_alignment = 1
+
+[node name="FriendsScroll" type="ScrollContainer" parent="VBox"]
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="FriendsList" type="VBoxContainer" parent="VBox/FriendsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Bottom" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="InviteButton" type="Button" parent="VBox/Bottom"]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Convite via overlay"
+
+[node name="StartButton" type="Button" parent="VBox/Bottom"]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Iniciar"
+
+[node name="BackButton" type="Button" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(220, 40)
+theme_override_font_sizes/font_size = 18
+text = "Voltar"

@@ -32,6 +32,11 @@ func submit(item: Node3D) -> bool:
 	return true
 
 func _process(delta: float) -> void:
+	# Online: only the host runs production. If every peer ticked its own timer they'd
+	# drift, and each would spawn its OWN plank -- two planks, divergent worlds.
+	# (Clients' label/bar therefore lag until O3b syncs the display.)
+	if NetworkManager.is_online and not multiplayer.is_server():
+		return
 	if _working:
 		_timer -= delta
 		if _timer <= 0.0:
@@ -51,10 +56,18 @@ func _start_one() -> void:
 func _finish_one() -> void:
 	_working = false
 	if plank_scene != null:
-		var plank := plank_scene.instantiate()
-		get_tree().current_scene.add_child(plank)
+		# randf_range would roll a different number on each machine, so online the host
+		# picks the spot once and the Arena spawns the same plank everywhere.
 		var jitter := Vector3(randf_range(-0.3, 0.3), 0.0, randf_range(-0.3, 0.3))
-		plank.global_transform = Transform3D(Basis.IDENTITY, _output.global_position + jitter)
+		var pos := _output.global_position + jitter
+		if NetworkManager.is_online:
+			var arena := get_tree().current_scene
+			if arena != null and arena.has_method("host_spawn_item"):
+				arena.host_spawn_item(plank_scene.resource_path, pos)
+		else:
+			var plank := plank_scene.instantiate()
+			get_tree().current_scene.add_child(plank)
+			plank.global_transform = Transform3D(Basis.IDENTITY, pos)
 	_update_label()
 	_update_bar()
 
