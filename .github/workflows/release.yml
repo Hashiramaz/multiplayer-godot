@@ -40,18 +40,24 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      # .godot/ é gitignored, então o runner precisa (re)importar os assets.
-      # A primeira passada às vezes retorna != 0 enquanto gera caches -- não é fatal.
-      - name: Import project
-        continue-on-error: true
-        run: godot --headless --import
-
-      - name: Export Windows build
+      # Import + export num passo só, usando o *_console.exe.
+      # O alias `godot` do setup aponta pro exe GUI (subsistema Windows): o PowerShell
+      # NÃO espera um app GUI, então o export "voltava" na hora e não gerava nada. O
+      # binário _console bloqueia até terminar e ainda imprime a saída (útil se falhar).
+      - name: Build (import + export)
         shell: pwsh
         run: |
+          $console = Get-ChildItem "$env:USERPROFILE\godot" -Recurse -Filter "*_console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $console) { throw "Godot console exe nao encontrado em $env:USERPROFILE\godot" }
+          Write-Host "Godot console: $console"
           New-Item -ItemType Directory -Force -Path build/windows | Out-Null
-          godot --headless --export-release "${{ env.EXPORT_PRESET }}" "build/windows/${{ env.EXE_NAME }}"
+          Write-Host "== Import =="
+          & $console --headless --import
+          Write-Host "== Export =="
+          & $console --headless --export-release "${{ env.EXPORT_PRESET }}" "build/windows/${{ env.EXE_NAME }}"
+          Write-Host "Godot exit code: $LASTEXITCODE"
           if (-not (Test-Path "build/windows/${{ env.EXE_NAME }}")) { throw "Export nao gerou o .exe" }
+          Write-Host ("OK: {0:N0} bytes" -f (Get-Item "build/windows/${{ env.EXE_NAME }}").Length)
 
       - name: Bundle steam_appid.txt + zip
         shell: pwsh
