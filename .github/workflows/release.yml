@@ -1,0 +1,80 @@
+name: Build & Release
+
+# Toda push na main exporta a build Windows, cria um GitHub Release e (se o segredo
+# BUTLER_API_KEY estiver configurado) atualiza o canal windows no itch.io.
+# Pushes só de docs/markdown não disparam (economiza minutos de runner).
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch: {}
+
+# Só uma release por vez; um push novo cancela a anterior em andamento.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # necessário pro softprops criar o Release
+
+env:
+  GODOT_VERSION: "4.7.0"
+  EXPORT_PRESET: "Windows Desktop"
+  EXE_NAME: "EscapeTheIsland.exe"
+  ITCH_TARGET: "jappa/escape-the-island:windows"
+  # Vazio até você adicionar o segredo -> o passo do itch é pulado com elegância.
+  BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Godot ${{ env.GODOT_VERSION }}
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
+          include-templates: true
+
+      # .godot/ é gitignored, então o runner precisa (re)importar os assets.
+      # A primeira passada às vezes retorna != 0 enquanto gera caches -- não é fatal.
+      - name: Import project
+        continue-on-error: true
+        run: godot --headless --import
+
+      - name: Export Windows build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build/windows | Out-Null
+          godot --headless --export-release "${{ env.EXPORT_PRESET }}" "build/windows/${{ env.EXE_NAME }}"
+          if (-not (Test-Path "build/windows/${{ env.EXE_NAME }}")) { throw "Export nao gerou o .exe" }
+
+      - name: Bundle steam_appid.txt + zip
+        shell: pwsh
+        run: |
+          Copy-Item steam_appid.txt build/windows/steam_appid.txt -Force
+          Compress-Archive -Path build/windows/* -DestinationPath EscapeTheIsland-windows.zip -Force
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          body: "Build automática do commit ${{ github.sha }}."
+          files: EscapeTheIsland-windows.zip
+
+      - name: Install butler
+        if: ${{ env.BUTLER_API_KEY != '' }}
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default" -OutFile butler.zip
+          Expand-Archive butler.zip -DestinationPath butler -Force
+
+      - name: Publish to itch.io
+        if: ${{ env.BUTLER_API_KEY != '' }}
+        shell: pwsh
+        run: butler\butler.exe push build/windows "${{ env.ITCH_TARGET }}"
