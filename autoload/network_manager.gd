@@ -41,6 +41,7 @@ var lobby_id: int = 0
 var _peer: MultiplayerPeer = null
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS # session handling must survive a pause
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)

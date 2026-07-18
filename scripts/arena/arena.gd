@@ -50,9 +50,9 @@ func _build_level(level: LevelData) -> void:
 		marker.transform = level.spawn_points[i]
 		spawn_points.add_child(marker)
 
-	# The match clock / win-loss is host-authoritative and comes online in O3; for the
-	# movement milestone we don't start it (it would tick independently on each peer).
-	if not NetworkManager.is_online and match_ui.has_method("configure"):
+	# The clock is host-authoritative online (see match_ui.gd): the host runs the
+	# countdown and broadcasts it; clients just display. Wins/losses fan out from the host.
+	if match_ui.has_method("configure"):
 		match_ui.configure(level)
 
 func _place_object(o: PlacedObject, index: int) -> void:

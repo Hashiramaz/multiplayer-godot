@@ -24,11 +24,14 @@ func _ready() -> void:
 func accepts(item_kind: String) -> bool:
 	return item_kind == "log"
 
-## Takes the log (consumes it) and queues a plank to be produced.
+## Takes the log (consumes it) and queues a plank to be produced. Runs on every peer
+## (via the deliver RPC), but only the host's queue actually drives production; the
+## host's _net_push then corrects everyone's displayed count.
 func submit(item: Node3D) -> bool:
 	item.queue_free()
 	_queue += 1
 	_update_label()
+	_net_push()
 	return true
 
 func _process(delta: float) -> void:
@@ -43,6 +46,7 @@ func _process(delta: float) -> void:
 			_finish_one()
 		_update_label()
 		_update_bar()
+		_net_push() # stream the moving bar to clients
 	elif _queue > 0:
 		_start_one()
 
@@ -52,6 +56,7 @@ func _start_one() -> void:
 	_timer = process_time
 	_update_label()
 	_update_bar()
+	_net_push()
 
 func _finish_one() -> void:
 	_working = false
@@ -70,15 +75,34 @@ func _finish_one() -> void:
 			plank.global_transform = Transform3D(Basis.IDENTITY, pos)
 	_update_label()
 	_update_bar()
+	_net_push()
+
+# --- Networked display (O3b) ----------------------------------------------
+# Only the host runs the timer, so clients would show a frozen label/bar. The host
+# streams its display state; clients apply it verbatim (they never tick locally).
+
+func _net_push() -> void:
+	if NetworkManager.is_online and multiplayer.is_server():
+		_net_apply_state.rpc(_working, _queue, _bar_progress())
+
+## Keep a tiny minimum so the fill's transform never collapses to zero scale.
+func _bar_progress() -> float:
+	if _working and process_time > 0.0:
+		return clampf(1.0 - _timer / process_time, 0.02, 1.0)
+	return 0.02
+
+@rpc("authority", "unreliable_ordered")
+func _net_apply_state(working: bool, queue: int, progress: float) -> void:
+	_working = working
+	_queue = queue
+	_update_label()
+	_progress_bar.visible = working
+	_fill.scale.x = progress
 
 ## Progress bar: visible only while working; the fill grows left-to-right 0 -> 1.
 func _update_bar() -> void:
 	_progress_bar.visible = _working
-	# Keep a tiny minimum so the fill's transform never collapses to zero scale.
-	var progress := 0.02
-	if _working and process_time > 0.0:
-		progress = clampf(1.0 - _timer / process_time, 0.02, 1.0)
-	_fill.scale.x = progress
+	_fill.scale.x = _bar_progress()
 
 func _update_label() -> void:
 	if _working:

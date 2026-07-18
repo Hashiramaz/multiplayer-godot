@@ -13,6 +13,11 @@ var _time_left: float = 0.0
 var _over: bool = false
 var _active: bool = false
 
+## Online: the host owns the clock and the ending; clients only display what it sends.
+var _online: bool = false
+var _is_host: bool = false
+var _last_sent_sec: int = -1
+
 @onready var timer_label: Label = $HUD/TimerLabel
 @onready var result_panel: Control = $Result
 @onready var result_title: Label = $Result/VBox/Title
@@ -30,10 +35,18 @@ func _ready() -> void:
 func configure(level: LevelData) -> void:
 	_time_left = level.match_duration
 	_active = true
+	_online = NetworkManager.is_online
+	_is_host = (not _online) or multiplayer.is_server()
 	_update_timer_label()
 
-	var boat := get_tree().get_first_node_in_group("station")
-	if boat != null and boat.has_signal("completed"):
+	# The sawmill is ALSO in group "station", so pick the one that actually has the
+	# 'completed' signal (the boat) instead of whatever comes first.
+	var boat: Node = null
+	for s in get_tree().get_nodes_in_group("station"):
+		if s.has_signal("completed"):
+			boat = s
+			break
+	if boat != null:
 		boat.completed.connect(_on_boat_completed)
 	else:
 		push_warning("MatchUI: no station with a 'completed' signal found.")
@@ -41,14 +54,42 @@ func configure(level: LevelData) -> void:
 func _process(delta: float) -> void:
 	if not _active or _over:
 		return
+	if _online and not _is_host:
+		return # clients get the time (and the ending) from the host
 	_time_left = maxf(_time_left - delta, 0.0)
 	_update_timer_label()
+	if _online:
+		# The HUD only shows whole seconds, so only push when that changes.
+		var sec := int(ceil(_time_left))
+		if sec != _last_sent_sec:
+			_last_sent_sec = sec
+			_net_time.rpc(_time_left)
 	if _time_left <= 0.0:
-		_end(false)
+		_end_authoritative(false)
 
 func _on_boat_completed() -> void:
-	if not _over:
-		_end(true)
+	# Fires on every peer (submit runs everywhere), but only the host may call it.
+	if _online and not _is_host:
+		return
+	_end_authoritative(true)
+
+## Host (or offline) settles the outcome; online it fans out to every peer.
+func _end_authoritative(won: bool) -> void:
+	if _over:
+		return
+	if _online:
+		_net_end.rpc(won)
+	else:
+		_end(won)
+
+@rpc("authority", "unreliable_ordered")
+func _net_time(t: float) -> void:
+	_time_left = t
+	_update_timer_label()
+
+@rpc("authority", "call_local", "reliable")
+func _net_end(won: bool) -> void:
+	_end(won)
 
 func _end(won: bool) -> void:
 	_over = true
@@ -80,7 +121,11 @@ func _input(event: InputEvent) -> void:
 			(focused as BaseButton).pressed.emit()
 
 func _on_replay() -> void:
+	if _online:
+		NetworkManager.leave()
 	GameManager.go_to_lobby()
 
 func _on_menu() -> void:
+	if _online:
+		NetworkManager.leave()
 	GameManager.go_to_main_menu()

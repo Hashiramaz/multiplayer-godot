@@ -20,6 +20,9 @@ var persona: String = ""
 var _steam: Object = null
 
 func _ready() -> void:
+	# Keep pumping Steam callbacks even if the tree is paused (couch pause), so the
+	# client never stalls mid-session.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	if not Engine.has_singleton("Steam"):
 		push_warning("SteamManager: GodotSteam não instalado (addons/). Rodando offline.")
 		return
