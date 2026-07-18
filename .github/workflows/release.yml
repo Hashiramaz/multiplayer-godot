@@ -47,34 +47,25 @@ jobs:
       - name: Build (import + export)
         shell: pwsh
         run: |
-          # Resolve the `godot` alias to the real exe (it's a symlink), then prefer the
-          # *_console.exe sibling (console subsystem: `&` blocks + prints). If there's
-          # no console build, fall back to Start-Process -Wait on the GUI exe (which
-          # pwsh otherwise wouldn't wait for -- that was the empty-build bug).
-          $src = (Get-Command godot).Source
-          $it = Get-Item $src
-          $real = $src
-          if ($it.Target) { $real = @($it.Target)[0]; if (-not [IO.Path]::IsPathRooted($real)) { $real = Join-Path (Split-Path $src) $real } }
-          $dir = Split-Path $real
-          $console = Get-ChildItem $dir -Filter "*_console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-          Write-Host "godot real: $real"
-          Write-Host "godot console: $console"
+          # The `godot` alias is a symlink to the GUI-subsystem exe. pwsh won't wait for
+          # a GUI app (that was the empty-build bug), so run it via Start-Process -Wait.
+          # Pass args as ONE quoted string, not an array: Start-Process splits array
+          # elements on spaces, which turned the "Windows Desktop" preset into "Windows".
+          $godot = (Get-Command godot).Source
+          Write-Host "Godot: $godot"
           New-Item -ItemType Directory -Force -Path build/windows | Out-Null
-          function Run-Godot($tag, [string[]]$a) {
-            Write-Host "== $tag =="
-            if ($console) {
-              & $console @a
-              Write-Host "$tag exit: $LASTEXITCODE"
-            } else {
-              $p = Start-Process -FilePath $real -ArgumentList $a -Wait -NoNewWindow -PassThru -RedirectStandardOutput "gd_$tag.out" -RedirectStandardError "gd_$tag.err"
-              Get-Content "gd_$tag.out","gd_$tag.err" -ErrorAction SilentlyContinue
-              Write-Host "$tag exit: $($p.ExitCode)"
-            }
+          $preset = "${{ env.EXPORT_PRESET }}"
+          $exe = "build/windows/${{ env.EXE_NAME }}"
+          function Run-Godot($tag, [string]$argline) {
+            Write-Host "== $tag :: $argline =="
+            $p = Start-Process -FilePath $godot -ArgumentList $argline -Wait -NoNewWindow -PassThru -RedirectStandardOutput "gd_$tag.out" -RedirectStandardError "gd_$tag.err"
+            Get-Content "gd_$tag.out","gd_$tag.err" -ErrorAction SilentlyContinue
+            Write-Host "$tag exit: $($p.ExitCode)"
           }
-          Run-Godot "import" @('--headless','--import')
-          Run-Godot "export" @('--headless','--export-release',"${{ env.EXPORT_PRESET }}","build/windows/${{ env.EXE_NAME }}")
-          if (-not (Test-Path "build/windows/${{ env.EXE_NAME }}")) { throw "Export nao gerou o .exe" }
-          Write-Host ("OK: {0:N0} bytes" -f (Get-Item "build/windows/${{ env.EXE_NAME }}").Length)
+          Run-Godot "import" "--headless --import"
+          Run-Godot "export" "--headless --export-release `"$preset`" `"$exe`""
+          if (-not (Test-Path $exe)) { throw "Export nao gerou o .exe" }
+          Write-Host ("OK: {0:N0} bytes" -f (Get-Item $exe).Length)
 
       - name: Bundle steam_appid.txt + zip
         shell: pwsh
