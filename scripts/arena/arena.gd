@@ -13,10 +13,11 @@ extends Node3D
 @onready var players: Node3D = $Players
 @onready var match_ui: Node = $MatchUI
 
-## Online spawn handshake state (server-side): who has loaded the Arena scene.
-var _net_ready_peers: Dictionary = {}
-var _net_expected: int = 0
-var _net_spawned: bool = false
+## Online spawn (host-side): peer_id -> slot index, for peers that reported ready.
+var _net_ready: Dictionary = {}
+var _net_slot_counter: int = 0
+## Client-side: throttle for re-sending our "ready" ping until we're spawned.
+var _net_ready_timer: float = 0.0
 
 ## Networked world objects by name. A registry (not get_node) because a carried log
 ## LEAVES $Interactables for a player's HoldPoint -- a path lookup couldn't follow it.
@@ -104,45 +105,66 @@ func _spawn_player(slot: int, device: int) -> void:
 	player.set_device(device)
 	player.set_color(PlayerManager.color_for_slot(slot))
 
-# --- Networked match (O2: replicated players) -----------------------------
-# Every peer builds the same island, then reports "ready" to the host once its
-# Arena scene is up. The host waits for everyone, then spawns one penguin per peer
-# via an RPC so all machines create the exact same node (named after the peer id,
-# which drives authority in player.gd). Movement itself is client-authoritative.
+# --- Networked match: replicated players (robust, per-peer spawn) ----------
+# Movement is client-authoritative, but the host owns spawning. Each peer, once its
+# Arena scene is up, pings the host "ready"; the host spawns THAT peer's penguin on
+# everyone already in, and catches the newcomer up on the ones spawned before it.
+# There's NO all-or-nothing wait: a lost/early ping just gets retried (see _process),
+# so a dropped handshake can never leave the match empty (the "no penguins" bug).
 
 func _start_net_match() -> void:
 	if multiplayer.is_server():
-		_net_expected = multiplayer.get_peers().size() + 1
-		_net_ready_peers.clear()
-		_net_mark_ready(1) # count ourselves (the host is peer 1)
+		_net_ready.clear()
+		_net_slot_counter = 0
+		_net_on_ready(1) # the host itself (peer 1) -- spawns immediately
 	else:
 		_net_client_ready.rpc_id(1)
 
-## Client -> host: "my Arena scene finished loading."
+func _process(delta: float) -> void:
+	# Client re-pings "ready" until its own penguin exists -- self-heals a lost or
+	# too-early handshake. No-op on the host and offline.
+	if not NetworkManager.is_online or multiplayer.is_server():
+		return
+	if players.has_node(str(multiplayer.get_unique_id())):
+		return
+	_net_ready_timer -= delta
+	if _net_ready_timer <= 0.0:
+		_net_ready_timer = 0.5
+		_net_client_ready.rpc_id(1)
+
+## Client -> host: "my Arena scene is up." Safe to call repeatedly (host is idempotent).
 @rpc("any_peer", "reliable")
 func _net_client_ready() -> void:
-	_net_mark_ready(multiplayer.get_remote_sender_id())
+	if multiplayer.is_server():
+		_net_on_ready(multiplayer.get_remote_sender_id())
 
-func _net_mark_ready(peer_id: int) -> void:
-	if not multiplayer.is_server() or _net_spawned:
+func _net_on_ready(pid: int) -> void:
+	if not multiplayer.is_server():
 		return
-	_net_ready_peers[peer_id] = true
-	if _net_ready_peers.size() >= _net_expected:
-		_net_spawn_all()
+	if _net_ready.has(pid):
+		_net_send_world_to(pid) # a retry -> just re-send the whole roster to them
+		return
+	var slot := _net_slot_counter
+	_net_slot_counter += 1
+	_net_ready[pid] = slot
+	# Spawn the newcomer on everyone already in (themselves included)...
+	for q in _net_ready:
+		_net_spawn_player.rpc_id(q, pid, NetworkManager.color_for_peer(pid), _net_spawn_transform(slot))
+	# ...and catch the newcomer up on everyone who arrived before them.
+	_net_send_world_to(pid)
 
-func _net_spawn_all() -> void:
-	_net_spawned = true
-	var ids: Array = [1]
-	ids.append_array(multiplayer.get_peers())
-	for i in ids.size():
-		var pid: int = ids[i]
-		_net_spawn_player.rpc(pid, NetworkManager.color_for_peer(pid), _net_spawn_transform(i))
+## Send every already-ready peer's penguin to one target peer.
+func _net_send_world_to(target: int) -> void:
+	for other in _net_ready:
+		_net_spawn_player.rpc_id(
+			target, other, NetworkManager.color_for_peer(other), _net_spawn_transform(_net_ready[other]))
 
-## Host -> everyone (call_local): create this peer's penguin identically on all
-## machines. The color index (chosen in the lobby) is passed so every peer paints
-## each penguin the same without syncing the color itself.
+## Host -> a peer: create a penguin. Idempotent -- guards against retry/catch-up dupes.
+## The color index (chosen in the lobby) is passed so every machine paints it the same.
 @rpc("authority", "call_local", "reliable")
 func _net_spawn_player(peer_id: int, color_index: int, xform: Transform3D) -> void:
+	if players.has_node(str(peer_id)):
+		return
 	var player := player_scene.instantiate()
 	player.name = str(peer_id) # must be set BEFORE _ready so authority is right
 	players.add_child(player)
