@@ -52,6 +52,12 @@ func _ready() -> void:
 	_input = PlayerInput.new(device)
 	_setup_animations()
 
+## True when THIS machine simulates this penguin: always offline (couch), or when
+## we're the multiplayer authority online. Decoupled from the peer's unique id so a
+## leftover/idle online session can't accidentally freeze couch players.
+func _controls_self() -> bool:
+	return not NetworkManager.is_online or is_multiplayer_authority()
+
 func set_device(new_device: int) -> void:
 	device = new_device
 	if _input:
@@ -63,8 +69,8 @@ func set_color(color: Color) -> void:
 	# repainting the (black-and-white) penguin. Built once, recolored on later calls.
 	if _color_ring == null:
 		var torus := TorusMesh.new()
-		torus.inner_radius = 0.42
-		torus.outer_radius = 0.58
+		torus.inner_radius = 0.54
+		torus.outer_radius = 0.74
 		torus.rings = 6
 		torus.ring_segments = 18
 		_color_ring = MeshInstance3D.new()
@@ -81,9 +87,8 @@ func _physics_process(delta: float) -> void:
 	_update_carry_pulse(delta) # cosmetic, runs on every machine for every penguin
 
 	# Remote players (not our authority) are smoothed toward the last state the owner
-	# sent. is_multiplayer_authority() is true for everyone offline (couch), so the
-	# real simulation below runs there.
-	if not is_multiplayer_authority():
+	# sent. Offline (couch) every player simulates locally.
+	if not _controls_self():
 		_net_interpolate(delta)
 		_update_locomotion_anim()
 		return

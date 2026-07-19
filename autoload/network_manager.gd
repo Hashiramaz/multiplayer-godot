@@ -165,7 +165,9 @@ func leave() -> void:
 		SteamManager.api().leaveLobby(lobby_id)
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
+	# Restore the pristine offline peer (unique id 1) instead of leaving it null --
+	# with null, is_multiplayer_authority() goes false and would freeze couch players.
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	_peer = null
 	is_online = false
 	is_host = false

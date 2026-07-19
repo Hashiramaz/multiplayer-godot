@@ -29,6 +29,9 @@ func go_to_online() -> void:
 	get_tree().change_scene_to_file(ONLINE_MENU_SCENE)
 
 func go_to_lobby() -> void:
+	# Guarantee a clean offline state: a leftover online session would send the couch
+	# Arena down the networked-spawn path (1 player instead of N).
+	NetworkManager.leave()
 	# Fresh lobby each time: clear who joined last session.
 	PlayerManager.clear()
 	set_state(State.LOBBY)
