@@ -12,6 +12,7 @@ func _ready() -> void:
 	online.pressed.connect(GameManager.go_to_online)
 	editor.pressed.connect(GameManager.go_to_editor)
 	quit.pressed.connect(_on_quit)
+	($VersionLabel as Label).text = GameManager.get_version()
 	play.grab_focus()
 
 ## The default ui_accept isn't firing on the gamepad's A here, so bridge it:

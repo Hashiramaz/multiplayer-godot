@@ -24,3 +24,6 @@ mono_crash.*.json
 
 # Exported builds
 /build/
+
+# Gerado por build (CI/publish) -- versao mostrada no menu
+/version.txt

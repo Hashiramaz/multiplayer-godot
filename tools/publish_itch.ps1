@@ -31,6 +31,10 @@ if ($ItchTarget -like "SEU-USUARIO/*") {
 	throw "Configure `$ItchTarget no topo deste script (formato usuario/jogo:windows)."
 }
 
+Write-Host "==> Gravando version.txt (local)..." -ForegroundColor Cyan
+$sha = (git -C $ProjectDir rev-parse --short HEAD).Trim()
+"local ($sha)" | Set-Content -Path (Join-Path $ProjectDir "version.txt") -Encoding utf8 -NoNewline
+
 Write-Host "==> Exportando build (Windows Desktop)..." -ForegroundColor Cyan
 if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null

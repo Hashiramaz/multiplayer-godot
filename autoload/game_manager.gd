@@ -45,3 +45,20 @@ func go_to_editor() -> void:
 func start_match() -> void:
 	set_state(State.PLAYING)
 	get_tree().change_scene_to_file(ARENA_SCENE)
+
+## Build version for the UI. Written into res://version.txt at build time -- by CI
+## ("build-N (sha)") or publish_itch.ps1 ("local (sha)"). Absent in the editor, where
+## it reads "dev". Cached after first read.
+var _version_cache: String = ""
+
+func get_version() -> String:
+	if _version_cache != "":
+		return _version_cache
+	_version_cache = "dev"
+	if FileAccess.file_exists("res://version.txt"):
+		var f := FileAccess.open("res://version.txt", FileAccess.READ)
+		if f != null:
+			var t := f.get_as_text().strip_edges()
+			if t != "":
+				_version_cache = t
+	return _version_cache

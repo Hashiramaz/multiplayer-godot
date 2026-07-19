@@ -54,6 +54,10 @@ jobs:
           $godot = (Get-Command godot).Source
           Write-Host "Godot: $godot"
           New-Item -ItemType Directory -Force -Path build/windows | Out-Null
+          # Versao mostrada no menu (bundled via include_filter no preset).
+          $sha = "${{ github.sha }}".Substring(0,7)
+          "build-${{ github.run_number }} ($sha)" | Set-Content -Path version.txt -Encoding utf8 -NoNewline
+          Write-Host "version.txt: $(Get-Content version.txt -Raw)"
           $preset = "${{ env.EXPORT_PRESET }}"
           $exe = "build/windows/${{ env.EXE_NAME }}"
           function Run-Godot($tag, [string]$argline) {
