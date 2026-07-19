@@ -6,6 +6,8 @@ extends Control
 @onready var status: Label = $VBox/Status
 @onready var members_list: VBoxContainer = $VBox/MembersList
 @onready var color_row: HBoxContainer = $VBox/ColorRow
+@onready var level_label: Label = $VBox/LevelRow/LevelLabel
+@onready var level_picker: OptionButton = $VBox/LevelRow/LevelPicker
 @onready var start_button: Button = $VBox/ButtonsRow/StartButton
 @onready var leave_button: Button = $VBox/ButtonsRow/LeaveButton
 @onready var invite_button: Button = $VBox/InviteButton
@@ -14,6 +16,7 @@ extends Control
 @onready var friends_list: VBoxContainer = $VBox/FriendsScroll/FriendsList
 
 var _color_buttons: Array[Button] = []
+var _levels: Array = [] # [{ name, path }] -- shippable levels, index == picker item
 
 func _ready() -> void:
 	GameManager.set_state(GameManager.State.ONLINE)
@@ -23,8 +26,31 @@ func _ready() -> void:
 	NetworkManager.lobby_changed.connect(_refresh)
 	NetworkManager.peers_changed.connect(_refresh)
 	_build_color_buttons()
+	_build_level_picker()
 	_refresh()
 	leave_button.grab_focus()
+
+func _build_level_picker() -> void:
+	_levels = LevelData.shared_levels()
+	for lv in _levels:
+		level_picker.add_item(str(lv["name"]))
+	level_picker.item_selected.connect(_on_level_picked)
+	_select_current_level()
+
+func _on_level_picked(idx: int) -> void:
+	NetworkManager.set_level(str(_levels[idx]["path"]))
+
+func _select_current_level() -> void:
+	for i in _levels.size():
+		if str(_levels[i]["path"]) == NetworkManager.selected_level_path:
+			level_picker.select(i)
+			return
+
+func _name_for_level(path: String) -> String:
+	for lv in _levels:
+		if str(lv["path"]) == path:
+			return str(lv["name"])
+	return "?"
 
 func _is_host() -> bool:
 	return multiplayer.is_server()
@@ -66,6 +92,10 @@ func _refresh() -> void:
 		var btn := _color_buttons[i]
 		btn.disabled = taken.has(i) and int(taken[i]) != my_id
 		btn.text = "✓" if i == my_color else ""
+
+	level_label.text = "Fase: " + _name_for_level(NetworkManager.selected_level_path)
+	level_picker.visible = _is_host() # only the host chooses; others just see it
+	_select_current_level()
 
 	start_button.visible = _is_host()
 	invite_button.visible = _is_host()

@@ -12,6 +12,9 @@ func _ready() -> void:
 	online.pressed.connect(GameManager.go_to_online)
 	editor.pressed.connect(GameManager.go_to_editor)
 	quit.pressed.connect(_on_quit)
+	# Level editor is a dev tool: only when running from the Godot editor, never in
+	# an exported build (levels are authored in-editor and committed to res://levels).
+	editor.visible = OS.has_feature("editor")
 	($VersionLabel as Label).text = GameManager.get_version()
 	play.grab_focus()
 

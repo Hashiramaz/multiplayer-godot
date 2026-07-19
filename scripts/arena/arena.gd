@@ -27,9 +27,11 @@ var _net_item_count: int = 0
 
 func _ready() -> void:
 	var level := GameManager.selected_level
-	# Online uses the default island on every peer so the terrain matches without
-	# syncing LevelData yet (that comes later). Offline keeps the selected level.
-	if NetworkManager.is_online or level == null:
+	# Online: everyone builds the level the host picked in the lobby (resolved by its
+	# res:// path, which every build shares). Offline keeps the level-select choice.
+	if NetworkManager.is_online:
+		level = LevelData.from_path(NetworkManager.selected_level_path)
+	elif level == null:
 		level = LevelData.make_default_island()
 	_build_level(level)
 	_setup_outline()

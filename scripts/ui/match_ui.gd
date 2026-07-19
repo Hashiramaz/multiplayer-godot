@@ -22,12 +22,13 @@ var _last_sent_sec: int = -1
 @onready var result_panel: Control = $Result
 @onready var result_title: Label = $Result/VBox/Title
 @onready var replay_button: Button = $Result/VBox/Replay
+@onready var menu_button: Button = $Result/VBox/Menu
 
 func _ready() -> void:
 	result_panel.visible = false
 	_update_timer_label()
 	replay_button.pressed.connect(_on_replay)
-	($Result/VBox/Menu as Button).pressed.connect(_on_menu)
+	menu_button.pressed.connect(_on_menu)
 
 ## Called by the Arena AFTER the level (and its boat) is built, so the countdown and
 ## the win condition wire up against objects that now exist in the tree. This node's
@@ -97,8 +98,15 @@ func _end(won: bool) -> void:
 	for player in get_tree().get_nodes_in_group("players"):
 		(player as Node).process_mode = Node.PROCESS_MODE_DISABLED
 	result_title.text = "Vocês escaparam da ilha!" if won else "O tempo acabou... a ilha venceu."
+	# Online: return everyone to the lobby (host-driven); clients just wait.
+	if _online:
+		replay_button.text = "Voltar ao lobby" if _is_host else "Aguardando o host..."
+		replay_button.disabled = not _is_host
 	result_panel.visible = true
-	replay_button.grab_focus()
+	if replay_button.disabled:
+		menu_button.grab_focus()
+	else:
+		replay_button.grab_focus()
 
 func _update_timer_label() -> void:
 	var total := int(ceil(_time_left))
@@ -122,8 +130,9 @@ func _input(event: InputEvent) -> void:
 
 func _on_replay() -> void:
 	if _online:
-		NetworkManager.leave()
-	GameManager.go_to_lobby()
+		NetworkManager.return_to_lobby() # keep the session; back to the online lobby
+	else:
+		GameManager.go_to_lobby()
 
 func _on_menu() -> void:
 	if _online:

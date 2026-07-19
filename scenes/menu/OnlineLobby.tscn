@@ -59,6 +59,21 @@ text = "Sua cor"
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="LevelRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LevelLabel" type="Label" parent="VBox/LevelRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "Fase: Ilha (padrão)"
+vertical_alignment = 1
+
+[node name="LevelPicker" type="OptionButton" parent="VBox/LevelRow"]
+custom_minimum_size = Vector2(260, 40)
+layout_mode = 2
+
 [node name="ButtonsRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
 theme_override_constants/separation = 10

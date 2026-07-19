@@ -43,6 +43,8 @@ var lobby_id: int = 0
 
 ## Lobby roster, host-authoritative: peer_id(int) -> { "name": String, "color": int }.
 var members: Dictionary = {}
+## Level chosen in the lobby (host-authoritative), as a shared-level path ("" = default).
+var selected_level_path: String = ""
 
 var _peer: MultiplayerPeer = null
 
@@ -81,6 +83,18 @@ func join_lobby(target_lobby_id: int) -> void:
 	SteamManager.api().joinLobby(target_lobby_id)
 	# Segue em _on_lobby_joined.
 
+## Host-only: pick the level everyone will play; broadcast so the lobby reflects it.
+func set_level(path: String) -> void:
+	if not multiplayer.is_server():
+		return
+	selected_level_path = path
+	_sync_level.rpc(path)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_level(path: String) -> void:
+	selected_level_path = path
+	lobby_changed.emit()
+
 ## Host-only: sends everyone (including the host) into the Arena scene together.
 func start_online_match() -> void:
 	if not multiplayer.is_server():
@@ -90,6 +104,17 @@ func start_online_match() -> void:
 @rpc("authority", "call_local", "reliable")
 func _rpc_go_to_arena() -> void:
 	GameManager.start_match()
+
+## Host-only: bring everyone back to the lobby (after a match ends). The session and
+## roster/colors are kept, so you can pick another level and go again.
+func return_to_lobby() -> void:
+	if not multiplayer.is_server():
+		return
+	_rpc_go_to_lobby.rpc()
+
+@rpc("authority", "call_local", "reliable")
+func _rpc_go_to_lobby() -> void:
+	GameManager.go_to_online_lobby()
 
 ## Opens the Steam overlay invite dialog for the current lobby (Shift+Tab UX).
 ## NOTE: the overlay only injects when the game is launched THROUGH Steam, so for
@@ -180,6 +205,7 @@ func leave() -> void:
 	is_host = false
 	lobby_id = 0
 	members.clear()
+	selected_level_path = ""
 
 ## Peer ids in the session, including ourselves.
 func player_count() -> int:

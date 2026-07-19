@@ -69,6 +69,37 @@ static func make_default_island() -> LevelData:
 	]
 	return level
 
+# --- Shippable levels (pickers + online sync) -----------------------------------
+
+## Levels that ship in the build and can be picked/synced: the built-in default plus
+## every .tres under res://levels. Each entry is { "name": String, "path": String },
+## where an empty path means the built-in island. (user:// is intentionally excluded
+## -- online peers must all resolve the same path, and only res:// ships identically.)
+static func shared_levels() -> Array:
+	var out: Array = [{ "name": "Ilha (padrão)", "path": "" }]
+	var dir := DirAccess.open("res://levels")
+	if dir != null:
+		dir.list_dir_begin()
+		var f := dir.get_next()
+		while f != "":
+			if not dir.current_is_dir() and f.ends_with(".tres"):
+				var path := "res://levels".path_join(f)
+				var res := load(path)
+				if res is LevelData:
+					out.append({ "name": (res as LevelData).level_name, "path": path })
+			f = dir.get_next()
+		dir.list_dir_end()
+	return out
+
+## Resolve a shared-level path to data ("" -> the built-in default island).
+static func from_path(path: String) -> LevelData:
+	if path == "":
+		return make_default_island()
+	var res := load(path)
+	if res is LevelData:
+		return res as LevelData
+	return make_default_island()
+
 static func _obj(type_id: String, pos: Vector3) -> PlacedObject:
 	var o := PlacedObject.new()
 	o.type_id = type_id
