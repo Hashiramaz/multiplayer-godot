@@ -207,14 +207,15 @@ func _set_alive_visuals(alive: bool) -> void:
 func _show_death_marker() -> void:
 	if _death_marker == null:
 		_death_marker = Label3D.new()
+		# A world-space label floating above the penguin -- NOT fixed_size (that pins a
+		# huge, constant-size label to the screen). Billboard so it always faces us.
 		_death_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		_death_marker.no_depth_test = true
-		_death_marker.fixed_size = true
-		_death_marker.pixel_size = 0.007
-		_death_marker.font_size = 64
-		_death_marker.outline_size = 14
+		_death_marker.fixed_size = false
+		_death_marker.pixel_size = 0.008
+		_death_marker.font_size = 48
+		_death_marker.outline_size = 10
 		_death_marker.modulate = Color(1.0, 0.45, 0.4)
-		_death_marker.position = Vector3(0.0, 2.2, 0.0)
+		_death_marker.position = Vector3(0.0, 1.9, 0.0)
 		add_child(_death_marker)
 	_death_marker.text = "Afogou!\n%d" % int(ceil(_respawn_display))
 	_death_marker.visible = true
