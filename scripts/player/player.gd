@@ -19,6 +19,8 @@ const ANIM_EAT := &"eat"
 const WALK_ANIM_SPEED: float = 0.5
 ## Crossfade entre clipes, em segundos.
 const ANIM_BLEND: float = 0.15
+## Quão rápido um player remoto persegue a posição/giro que o dono mandou (rede).
+const NET_LERP_SPEED: float = 16.0
 
 var device: int = PlayerInput.DEVICE_NONE
 var player_color: Color = Color.WHITE
@@ -26,6 +28,13 @@ var _input: PlayerInput
 var _carried: Node3D = null
 var _anim: AnimationPlayer = null
 var _playing_action: bool = false ## True enquanto uma ação one-shot (ex.: eat) toca.
+
+## Team-color ring at the feet (built lazily in set_color).
+var _color_ring: MeshInstance3D = null
+## Interpolation targets for a REMOTE penguin, fed by _remote_state.
+var _net_target_pos: Vector3 = Vector3.ZERO
+var _net_target_yaw: float = 0.0
+var _net_has_target: bool = false
 
 @onready var pivot: Node3D = $Pivot
 @onready var hold_point: Node3D = $Pivot/HoldPoint
@@ -49,15 +58,33 @@ func set_device(new_device: int) -> void:
 		_input.device = new_device
 
 func set_color(color: Color) -> void:
-	# Color choice for the penguin is deferred; just remember the slot color for
-	# now so a later pass (tint / team indicator / palette swap) can apply it.
 	player_color = color
+	# A flat ring at the feet in the slot color -- reads as team identity without
+	# repainting the (black-and-white) penguin. Built once, recolored on later calls.
+	if _color_ring == null:
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.42
+		torus.outer_radius = 0.58
+		torus.rings = 6
+		torus.ring_segments = 18
+		_color_ring = MeshInstance3D.new()
+		_color_ring.mesh = torus
+		_color_ring.position = Vector3(0.0, 0.06, 0.0)
+		_color_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_color_ring)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED # pops regardless of light
+	mat.albedo_color = color
+	_color_ring.material_override = mat
 
 func _physics_process(delta: float) -> void:
-	# Remote players (not our authority) are driven by _remote_state; we only keep
-	# their locomotion animation alive from the synced velocity. is_multiplayer_authority()
-	# is true for everyone in offline couch mode, so this is a no-op there.
+	_update_carry_pulse(delta) # cosmetic, runs on every machine for every penguin
+
+	# Remote players (not our authority) are smoothed toward the last state the owner
+	# sent. is_multiplayer_authority() is true for everyone offline (couch), so the
+	# real simulation below runs there.
 	if not is_multiplayer_authority():
+		_net_interpolate(delta)
 		_update_locomotion_anim()
 		return
 
@@ -90,9 +117,33 @@ func _physics_process(delta: float) -> void:
 
 @rpc("authority", "unreliable_ordered")
 func _remote_state(pos: Vector3, pivot_yaw: float, vel: Vector3) -> void:
-	global_position = pos
-	pivot.rotation.y = pivot_yaw
-	velocity = vel
+	velocity = vel # feeds the locomotion animation on the remote
+	_net_target_pos = pos
+	_net_target_yaw = pivot_yaw
+	if not _net_has_target:
+		# First packet: snap so we don't slide in from the spawn point.
+		global_position = pos
+		pivot.rotation.y = pivot_yaw
+		_net_has_target = true
+
+## Smoothly chase the owner's last reported transform (kills the per-packet snap).
+func _net_interpolate(delta: float) -> void:
+	if not _net_has_target:
+		return
+	var t := clampf(NET_LERP_SPEED * delta, 0.0, 1.0)
+	global_position = global_position.lerp(_net_target_pos, t)
+	pivot.rotation.y = lerp_angle(pivot.rotation.y, _net_target_yaw, t)
+
+## Gently pulse the color ring while carrying, so it's clear who's holding something.
+## Driven by _carried, which is set on every peer, so the cue shows on all screens.
+func _update_carry_pulse(delta: float) -> void:
+	if _color_ring == null:
+		return
+	if _carried != null:
+		var s := 1.0 + 0.18 * sin(Time.get_ticks_msec() * 0.008)
+		_color_ring.scale = Vector3(s, 1.0, s)
+	else:
+		_color_ring.scale = _color_ring.scale.lerp(Vector3.ONE, clampf(10.0 * delta, 0.0, 1.0))
 
 # --- Movement -------------------------------------------------------------
 

@@ -135,15 +135,18 @@ func _net_spawn_all() -> void:
 	var ids: Array = [1]
 	ids.append_array(multiplayer.get_peers())
 	for i in ids.size():
-		_net_spawn_player.rpc(ids[i], _net_spawn_transform(i))
+		_net_spawn_player.rpc(ids[i], i, _net_spawn_transform(i))
 
-## Host -> everyone (call_local): create this peer's penguin identically on all machines.
+## Host -> everyone (call_local): create this peer's penguin identically on all
+## machines. The slot index drives the team color deterministically, so every peer
+## paints each penguin the same without syncing the color itself.
 @rpc("authority", "call_local", "reliable")
-func _net_spawn_player(peer_id: int, xform: Transform3D) -> void:
+func _net_spawn_player(peer_id: int, slot: int, xform: Transform3D) -> void:
 	var player := player_scene.instantiate()
 	player.name = str(peer_id) # must be set BEFORE _ready so authority is right
 	players.add_child(player)
 	player.transform = xform
+	player.set_color(PlayerManager.color_for_slot(slot))
 
 func _net_spawn_transform(index: int) -> Transform3D:
 	var n := spawn_points.get_child_count()
