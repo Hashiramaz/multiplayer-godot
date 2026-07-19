@@ -104,6 +104,7 @@ func _spawn_player(slot: int, device: int) -> void:
 	player.global_transform = spawn.global_transform
 	player.set_device(device)
 	player.set_color(PlayerManager.color_for_slot(slot))
+	player.set_spawn_info(spawn.global_transform, _water_level())
 
 # --- Networked match: replicated players (robust, per-peer spawn) ----------
 # Movement is client-authoritative, but the host owns spawning. Each peer, once its
@@ -170,12 +171,65 @@ func _net_spawn_player(peer_id: int, color_index: int, xform: Transform3D) -> vo
 	players.add_child(player)
 	player.transform = xform
 	player.set_color(PlayerManager.color_for_slot(color_index))
+	player.set_spawn_info(xform, _water_level())
 
 func _net_spawn_transform(index: int) -> Transform3D:
 	var n := spawn_points.get_child_count()
 	if n > 0:
 		return (spawn_points.get_child(clampi(index, 0, n - 1)) as Node3D).transform
 	return Transform3D(Basis.IDENTITY, Vector3(index * 2.0, 1.0, 0.0))
+
+## Water surface Y for this level (drives drowning). The terrain has it after build_from.
+func _water_level() -> float:
+	return float(terrain.water_level)
+
+# --- Water deaths (host-authoritative online) -----------------------------
+# The owner of a penguin detects its own drowning; online it reports here and the
+# host decides + broadcasts, so death/respawn stay consistent on every machine.
+
+func report_drown(player_name: String) -> void:
+	if not NetworkManager.is_online:
+		return # couch is handled locally by the player
+	if multiplayer.is_server():
+		_host_drown(player_name)
+	else:
+		_req_drown.rpc_id(1, player_name)
+
+@rpc("any_peer", "reliable")
+func _req_drown(player_name: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var p := players.get_node_or_null(player_name)
+	if p != null and p.get_multiplayer_authority() == multiplayer.get_remote_sender_id():
+		_host_drown(player_name)
+
+func _host_drown(player_name: String) -> void:
+	var p := players.get_node_or_null(player_name)
+	if p == null or p.is_dead():
+		return
+	# Drop what they carried on safe ground (their spawn) so it isn't lost underwater.
+	var carried: Node3D = p.get_carried()
+	if carried != null:
+		var pos: Vector3 = p.get_spawn_origin()
+		pos.y = 0.25
+		host_drop(player_name, str(carried.name), Transform3D(Basis.IDENTITY, pos))
+	_net_die.rpc(player_name)
+	var delay: float = p.respawn_delay
+	await get_tree().create_timer(delay).timeout
+	if is_instance_valid(p):
+		_net_respawn.rpc(player_name)
+
+@rpc("authority", "call_local", "reliable")
+func _net_die(player_name: String) -> void:
+	var p := players.get_node_or_null(player_name)
+	if p != null:
+		p.die()
+
+@rpc("authority", "call_local", "reliable")
+func _net_respawn(player_name: String) -> void:
+	var p := players.get_node_or_null(player_name)
+	if p != null:
+		p.respawn()
 
 # --- Networked interactions (O3a: host arbitrates the world) ---------------
 # Movement is client-authoritative, but the WORLD is not: two players can reach for

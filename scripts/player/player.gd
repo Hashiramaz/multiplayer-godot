@@ -7,8 +7,11 @@ extends CharacterBody3D
 @export var speed: float = 6.0
 @export var acceleration: float = 40.0
 @export var turn_speed: float = 12.0
+@export var respawn_delay: float = 5.0 ## Segundos afogado antes de voltar ao spawn.
 
 const GRAVITY: float = 20.0
+## Afoga quando o centro do corpo (~origem + 0.8) passa abaixo da linha d'água.
+const DROWN_DEPTH: float = 0.8
 const DROP_HEIGHT: float = 0.25 ## Rest height of a dropped item on the floor.
 
 ## Clipes de animação embutidos no FBX do pinguim (nomes vindos dos "takes" do FBX).
@@ -36,9 +39,18 @@ var _net_target_pos: Vector3 = Vector3.ZERO
 var _net_target_yaw: float = 0.0
 var _net_has_target: bool = false
 
+## Death / respawn (water).
+var _dead: bool = false
+var _respawn_display: float = 0.0 ## Countdown shown on the marker.
+var _water_y: float = -1000.0 ## Drowning disabled until the Arena sets the real level.
+var _spawn_transform: Transform3D = Transform3D.IDENTITY
+var _death_marker: Label3D = null
+var _drown_reported: bool = false ## Online: avoids re-asking the host every frame.
+
 @onready var pivot: Node3D = $Pivot
 @onready var hold_point: Node3D = $Pivot/HoldPoint
 @onready var interaction_area: Area3D = $InteractionArea
+@onready var _collision: CollisionShape3D = $Collision
 
 func _ready() -> void:
 	add_to_group("players")
@@ -86,6 +98,10 @@ func set_color(color: Color) -> void:
 func _physics_process(delta: float) -> void:
 	_update_carry_pulse(delta) # cosmetic, runs on every machine for every penguin
 
+	if _dead:
+		_update_death(delta)
+		return
+
 	# Remote players (not our authority) are smoothed toward the last state the owner
 	# sent. Offline (couch) every player simulates locally.
 	if not _controls_self():
@@ -114,6 +130,108 @@ func _physics_process(delta: float) -> void:
 
 	if NetworkManager.is_online:
 		_remote_state.rpc(global_position, pivot.rotation.y, velocity)
+
+	_check_drown()
+
+# --- Water: drown + respawn -----------------------------------------------
+
+## The Arena tells us our respawn point + the water surface height at spawn time.
+func set_spawn_info(spawn_xform: Transform3D, water_y: float) -> void:
+	_spawn_transform = spawn_xform
+	_water_y = water_y
+
+func is_dead() -> bool:
+	return _dead
+
+func get_carried() -> Node3D:
+	return _carried
+
+func get_spawn_origin() -> Vector3:
+	return _spawn_transform.origin
+
+## Owner-side check: half the body under water -> drown.
+func _check_drown() -> void:
+	if global_position.y >= _water_y - DROWN_DEPTH:
+		return
+	if not NetworkManager.is_online:
+		die() # couch: resolve locally
+	elif not _drown_reported:
+		# Host-authoritative: ask the Arena once; it decides + broadcasts to everyone.
+		_drown_reported = true
+		var arena := get_tree().current_scene
+		if arena != null and arena.has_method("report_drown"):
+			arena.report_drown(str(name))
+
+## Enter the dead state on THIS machine -- called locally (couch) or via the Arena's
+## _net_die on every peer (online). Parks the hidden penguin at its spawn and shows a
+## marker; the actual respawn is timed by whoever owns it (see _update_death / host).
+func die() -> void:
+	if _dead:
+		return
+	_dead = true
+	_respawn_display = respawn_delay
+	if _carried != null:
+		_drop_at_spawn() # couch path; online the host already dropped it
+	global_transform = _spawn_transform
+	velocity = Vector3.ZERO
+	_set_alive_visuals(false)
+	_show_death_marker()
+
+func respawn() -> void:
+	_dead = false
+	_drown_reported = false
+	global_transform = _spawn_transform
+	velocity = Vector3.ZERO
+	_net_has_target = false # remote copies re-snap to the fresh position
+	_set_alive_visuals(true)
+	if _death_marker != null:
+		_death_marker.visible = false
+
+func _update_death(delta: float) -> void:
+	_respawn_display = maxf(_respawn_display - delta, 0.0)
+	if _death_marker != null:
+		_death_marker.text = "Afogou!\n%d" % int(ceil(_respawn_display))
+	# Couch: we own the timer. Online: the host respawns us via RPC.
+	if not NetworkManager.is_online and _respawn_display <= 0.0:
+		respawn()
+
+func _set_alive_visuals(alive: bool) -> void:
+	pivot.visible = alive
+	interaction_area.monitoring = alive
+	interaction_area.monitorable = alive
+	if _collision != null:
+		_collision.disabled = not alive
+	if _color_ring != null:
+		_color_ring.visible = alive
+
+func _show_death_marker() -> void:
+	if _death_marker == null:
+		_death_marker = Label3D.new()
+		_death_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_death_marker.no_depth_test = true
+		_death_marker.fixed_size = true
+		_death_marker.pixel_size = 0.007
+		_death_marker.font_size = 64
+		_death_marker.outline_size = 14
+		_death_marker.modulate = Color(1.0, 0.45, 0.4)
+		_death_marker.position = Vector3(0.0, 2.2, 0.0)
+		add_child(_death_marker)
+	_death_marker.text = "Afogou!\n%d" % int(ceil(_respawn_display))
+	_death_marker.visible = true
+
+func _drop_at_spawn() -> void:
+	var item := _carried
+	_carried = null
+	if item == null:
+		return
+	if item.get_parent() != null:
+		item.get_parent().remove_child(item)
+	get_tree().current_scene.add_child(item)
+	var pos := _spawn_transform.origin
+	pos.y = DROP_HEIGHT
+	item.global_transform = Transform3D(Basis.IDENTITY, pos)
+	if item.has_method("set_held"):
+		item.set_held(false)
 
 # --- Networking (movement sync) -------------------------------------------
 # Client-authoritative movement: the owner simulates its penguin and pushes the
