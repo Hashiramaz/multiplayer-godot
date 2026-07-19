@@ -10,6 +10,7 @@ const ONLINE_LOBBY_SCENE: String = "res://scenes/menu/OnlineLobby.tscn"
 const LOBBY_SCENE: String = "res://scenes/lobby/Lobby.tscn"
 const LEVEL_SELECT_SCENE: String = "res://scenes/levels/LevelSelect.tscn"
 const EDITOR_SCENE: String = "res://scenes/editor/LevelEditor.tscn"
+const LEVEL_MANIFEST_SCENE: String = "res://scenes/menu/LevelManifest.tscn"
 const ARENA_SCENE: String = "res://scenes/arena/Arena.tscn"
 
 var state: State = State.BOOT
@@ -51,6 +52,11 @@ func go_to_level_select() -> void:
 func go_to_editor() -> void:
 	set_state(State.EDITOR)
 	get_tree().change_scene_to_file(EDITOR_SCENE)
+
+## Dev-only screen to curate which levels ship in the build and in what order.
+func go_to_level_manifest() -> void:
+	set_state(State.EDITOR)
+	get_tree().change_scene_to_file(LEVEL_MANIFEST_SCENE)
 
 func start_match() -> void:
 	set_state(State.PLAYING)

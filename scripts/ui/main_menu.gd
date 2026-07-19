@@ -7,14 +7,18 @@ func _ready() -> void:
 	var play := $VBox/Play as Button
 	var online := $VBox/Online as Button
 	var editor := $VBox/Editor as Button
+	var manifest := $VBox/Manifest as Button
 	var quit := $VBox/Quit as Button
 	play.pressed.connect(GameManager.go_to_lobby)
 	online.pressed.connect(GameManager.go_to_online)
 	editor.pressed.connect(GameManager.go_to_editor)
+	manifest.pressed.connect(GameManager.go_to_level_manifest)
 	quit.pressed.connect(_on_quit)
-	# Level editor is a dev tool: only when running from the Godot editor, never in
-	# an exported build (levels are authored in-editor and committed to res://levels).
+	# Level editor + build-manifest are dev tools: only when running from the Godot
+	# editor, never in an exported build (levels are authored in-editor, committed to
+	# res://levels, and curated into the build via the manifest).
 	editor.visible = OS.has_feature("editor")
+	manifest.visible = OS.has_feature("editor")
 	($VersionLabel as Label).text = GameManager.get_version()
 	play.grab_focus()
 

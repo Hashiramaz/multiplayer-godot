@@ -6,8 +6,6 @@ extends Control
 ##
 ## Navigable by keyboard and controller, same bridge pattern as the other menus.
 
-const LEVEL_DIRS: Array[String] = ["res://levels", "user://levels"]
-
 @onready var list: VBoxContainer = $VBox/List
 @onready var back_button: Button = $VBox/Back
 
@@ -34,22 +32,14 @@ func _build_list() -> void:
 	else:
 		back_button.grab_focus()
 
-## Built-in default first, then every LevelData resource found on disk.
+## The curated, ordered set of levels for the build (respects the manifest), so the
+## couch picker matches what ships. Falls back to the built-in island if empty.
 func _load_levels() -> Array[LevelData]:
-	var out: Array[LevelData] = [LevelData.make_default_island()]
-	for dir_path in LEVEL_DIRS:
-		var dir := DirAccess.open(dir_path)
-		if dir == null:
-			continue
-		dir.list_dir_begin()
-		var file := dir.get_next()
-		while file != "":
-			if not dir.current_is_dir() and file.ends_with(".tres"):
-				var res := load(dir_path.path_join(file))
-				if res is LevelData:
-					out.append(res as LevelData)
-			file = dir.get_next()
-		dir.list_dir_end()
+	var out: Array[LevelData] = []
+	for e in LevelData.shared_levels():
+		out.append(LevelData.from_path(str(e["path"])))
+	if out.is_empty():
+		out.append(LevelData.make_default_island())
 	return out
 
 func _on_level_chosen(index: int) -> void:

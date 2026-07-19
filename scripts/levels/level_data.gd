@@ -71,25 +71,65 @@ static func make_default_island() -> LevelData:
 
 # --- Shippable levels (pickers + online sync) -----------------------------------
 
-## Levels that ship in the build and can be picked/synced: the built-in default plus
-## every .tres under res://levels. Each entry is { "name": String, "path": String },
-## where an empty path means the built-in island. (user:// is intentionally excluded
-## -- online peers must all resolve the same path, and only res:// ships identically.)
+## Levels that ship/are pickable in the GAME: enabled entries in manifest order.
+## Each entry is { "name": String, "path": String } ("" = built-in default island).
+## (user:// is intentionally excluded -- online peers must all resolve the same path,
+## and only res:// ships identically.)
 static func shared_levels() -> Array:
-	var out: Array = [{ "name": "Ilha (padrão)", "path": "" }]
+	var out: Array = []
+	for e in manifest_entries():
+		if e["enabled"]:
+			out.append({ "name": e["name"], "path": e["path"] })
+	return out
+
+## Full list for the dev "Fases na Build" screen: every known level with its enabled
+## flag, in manifest order (new files on disk appended at the end). Each entry is
+## { "name": String, "path": String, "enabled": bool }.
+static func manifest_entries() -> Array:
+	var manifest := LevelManifest.load_or_create()
+	var found := _scan_level_files()
+	var ordered: Array = []
+	var seen := {}
+	# Manifest order first -- keep "" and files that still exist on disk.
+	for p in manifest.order:
+		if (p == "" or found.has(p)) and not seen.has(p):
+			ordered.append(p)
+			seen[p] = true
+	if not seen.has(""): # the built-in default is always an option
+		ordered.push_front("")
+		seen[""] = true
+	for p in found: # brand-new files not yet in the manifest
+		if not seen.has(p):
+			ordered.append(p)
+			seen[p] = true
+	var out: Array = []
+	for p in ordered:
+		out.append({ "name": _level_name_for(p), "path": p, "enabled": manifest.is_enabled(p) })
+	return out
+
+## Every LevelData .tres path under res://levels (the manifest file itself skipped).
+static func _scan_level_files() -> Array:
+	var out: Array = []
 	var dir := DirAccess.open("res://levels")
 	if dir != null:
 		dir.list_dir_begin()
 		var f := dir.get_next()
 		while f != "":
-			if not dir.current_is_dir() and f.ends_with(".tres"):
+			if not dir.current_is_dir() and f.ends_with(".tres") and f != "manifest.tres":
 				var path := "res://levels".path_join(f)
-				var res := load(path)
-				if res is LevelData:
-					out.append({ "name": (res as LevelData).level_name, "path": path })
+				if load(path) is LevelData:
+					out.append(path)
 			f = dir.get_next()
 		dir.list_dir_end()
 	return out
+
+static func _level_name_for(path: String) -> String:
+	if path == "":
+		return "Ilha (padrão)"
+	var res := load(path)
+	if res is LevelData:
+		return (res as LevelData).level_name
+	return path.get_file()
 
 ## Resolve a shared-level path to data ("" -> the built-in default island).
 static func from_path(path: String) -> LevelData:
