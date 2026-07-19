@@ -14,8 +14,11 @@ signal peers_changed()                 ## Someone connected/disconnected.
 signal connection_failed(reason: String)
 ## Browsable lobbies: Array of { id, host, members, max }.
 signal lobby_list_updated(lobbies: Array)
+## Roster/colors changed -- drives the lobby screen.
+signal lobby_changed()
 
 const MAX_LOBBY_MEMBERS: int = 4
+const NUM_COLORS: int = 4 # PlayerManager.PLAYER_COLORS.size()
 ## Lobby data tags. `game` is what isolates our lobbies from the sea of other
 ## Spacewar (480) lobbies; `host` carries the host's name so the browser can show it
 ## without needing persona data for strangers.
@@ -38,6 +41,9 @@ var is_online: bool = false
 var is_host: bool = false
 var lobby_id: int = 0
 
+## Lobby roster, host-authoritative: peer_id(int) -> { "name": String, "color": int }.
+var members: Dictionary = {}
+
 var _peer: MultiplayerPeer = null
 
 func _ready() -> void:
@@ -48,6 +54,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_connect_steam_signals()
+	call_deferred("_check_launch_invite") # cold-start Steam invite, if any
 
 func _connect_steam_signals() -> void:
 	var steam := SteamManager.api()
@@ -172,6 +179,7 @@ func leave() -> void:
 	is_online = false
 	is_host = false
 	lobby_id = 0
+	members.clear()
 
 ## Peer ids in the session, including ourselves.
 func player_count() -> int:
@@ -195,7 +203,10 @@ func _on_lobby_created(result: int, new_lobby_id: int) -> void:
 		connection_failed.emit("host_peer_failed(%d)" % err)
 		return
 	is_online = true
+	members.clear()
+	_host_add_member(1, SteamManager.persona) # the host is peer 1
 	hosted.emit(lobby_id)
+	GameManager.go_to_online_lobby()
 
 func _on_lobby_joined(joined_lobby_id: int, _perms: int, _locked: bool, response: int) -> void:
 	if response != STEAM_RESULT_OK:
@@ -209,9 +220,103 @@ func _on_lobby_joined(joined_lobby_id: int, _perms: int, _locked: bool, response
 	if err != OK:
 		connection_failed.emit("client_peer_failed(%d)" % err)
 
-## Accepting a Steam overlay invite routes here with the target lobby.
+## Accepting a Steam overlay invite (game already running) routes here.
 func _on_join_requested(request_lobby_id: int, _friend_id: int) -> void:
 	join_lobby(request_lobby_id)
+
+# --- Lobby roster (host-authoritative) ------------------------------------
+# The host owns `members` and broadcasts the whole dict on every change. Clients
+# only display it and send requests (register name, pick color) back to the host.
+
+func _host_add_member(id: int, pname: String) -> void:
+	if not multiplayer.is_server():
+		return
+	members[id] = { "name": pname, "color": _host_free_color() }
+	_broadcast_members()
+
+func _host_free_color() -> int:
+	var used := {}
+	for m in members.values():
+		used[int(m["color"])] = true
+	for c in NUM_COLORS:
+		if not used.has(c):
+			return c
+	return 0
+
+func _broadcast_members() -> void:
+	if multiplayer.is_server():
+		_sync_members.rpc(members)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_members(data: Dictionary) -> void:
+	members = data
+	lobby_changed.emit()
+
+## Client -> host: "I'm in, here's my name." Host adds us + assigns a free color.
+@rpc("any_peer", "reliable")
+func _register_member(pname: String) -> void:
+	if not multiplayer.is_server():
+		return
+	_host_add_member(multiplayer.get_remote_sender_id(), pname)
+
+## Anyone can ask for a color; the host grants it only if it's free.
+func choose_color(index: int) -> void:
+	if multiplayer.is_server():
+		_apply_color(multiplayer.get_unique_id(), index)
+	else:
+		_request_color.rpc_id(1, index)
+
+@rpc("any_peer", "reliable")
+func _request_color(index: int) -> void:
+	if not multiplayer.is_server():
+		return
+	_apply_color(multiplayer.get_remote_sender_id(), index)
+
+func _apply_color(id: int, index: int) -> void:
+	if not multiplayer.is_server() or index < 0 or index >= NUM_COLORS:
+		return
+	for k in members:
+		if k != id and int(members[k]["color"]) == index:
+			return # already taken
+	if members.has(id):
+		members[id]["color"] = index
+		_broadcast_members()
+
+## Host-only: boot a peer. RPC tells them to leave; we also drop them + cut the link.
+func kick(id: int) -> void:
+	if not multiplayer.is_server() or id == 1:
+		return
+	_kicked.rpc_id(id)
+	if members.has(id):
+		members.erase(id)
+		_broadcast_members()
+	var peer := multiplayer.multiplayer_peer
+	if peer != null and peer.has_method("disconnect_peer"):
+		peer.disconnect_peer(id)
+
+## Host -> a specific client: you were removed; back to the online menu.
+@rpc("authority", "reliable")
+func _kicked() -> void:
+	leave()
+	GameManager.go_to_online()
+
+## Color index a peer picked, used when spawning. Defaults to 0 if unknown.
+func color_for_peer(id: int) -> int:
+	if members.has(id):
+		return int(members[id]["color"])
+	return 0
+
+## Cold-start invite: Steam launches the game with "+connect_lobby <id>" when a
+## friend accepts an invite while the game is closed. Join it once we're ready.
+func _check_launch_invite() -> void:
+	if not SteamManager.available:
+		return
+	var args := OS.get_cmdline_args()
+	var idx := args.find("+connect_lobby")
+	if idx != -1 and idx + 1 < args.size():
+		var lid := int(args[idx + 1])
+		if lid != 0:
+			join_lobby(lid)
 
 # --- Peer creation (SteamMultiplayerPeer via ClassDB) ---------------------
 
@@ -241,12 +346,18 @@ func _on_peer_connected(id: int) -> void:
 
 func _on_peer_disconnected(id: int) -> void:
 	print("NetworkManager: peer saiu %d" % id)
+	if multiplayer.is_server() and members.has(id):
+		members.erase(id)
+		_broadcast_members()
 	peers_changed.emit()
 
 func _on_connected_to_server() -> void:
 	print("NetworkManager: conectado ao host")
 	is_online = true
 	joined.emit()
+	# Tell the host who we are so it can add us to the roster + assign a color.
+	_register_member.rpc_id(1, SteamManager.persona)
+	GameManager.go_to_online_lobby()
 
 func _on_connection_failed() -> void:
 	push_warning("NetworkManager: falha ao conectar")
@@ -254,8 +365,12 @@ func _on_connection_failed() -> void:
 
 func _on_server_disconnected() -> void:
 	is_online = false
+	members.clear()
 	push_warning("NetworkManager: host caiu")
 	peers_changed.emit()
+	lobby_changed.emit()
+	# Host went away -- bounce back to the online entry screen.
+	GameManager.go_to_online()
 
 # --- Helpers --------------------------------------------------------------
 

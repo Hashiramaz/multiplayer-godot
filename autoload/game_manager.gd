@@ -6,6 +6,7 @@ enum State { BOOT, MENU, ONLINE, LOBBY, LEVEL_SELECT, EDITOR, PLAYING, PAUSED, R
 
 const MAIN_MENU_SCENE: String = "res://scenes/menu/MainMenu.tscn"
 const ONLINE_MENU_SCENE: String = "res://scenes/menu/OnlineMenu.tscn"
+const ONLINE_LOBBY_SCENE: String = "res://scenes/menu/OnlineLobby.tscn"
 const LOBBY_SCENE: String = "res://scenes/lobby/Lobby.tscn"
 const LEVEL_SELECT_SCENE: String = "res://scenes/levels/LevelSelect.tscn"
 const EDITOR_SCENE: String = "res://scenes/editor/LevelEditor.tscn"
@@ -27,6 +28,12 @@ func go_to_main_menu() -> void:
 func go_to_online() -> void:
 	set_state(State.ONLINE)
 	get_tree().change_scene_to_file(ONLINE_MENU_SCENE)
+
+## The connected online lobby (roster + colors). Entered automatically when we host
+## or join (incl. accepting a Steam invite).
+func go_to_online_lobby() -> void:
+	set_state(State.ONLINE)
+	get_tree().change_scene_to_file(ONLINE_LOBBY_SCENE)
 
 func go_to_lobby() -> void:
 	# Guarantee a clean offline state: a leftover online session would send the couch
