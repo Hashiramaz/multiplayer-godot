@@ -147,21 +147,103 @@ Modelo por **grupos + Area3D**, sem herança pesada:
   ignora input enquanto o estado é `RESULT`.
 
 ## Autoloads
-- `GameManager` — estado global (enum BOOT/MENU/LOBBY/LEVEL_SELECT/EDITOR/PLAYING/
-  PAUSED/RESULT) + flow de cena (`go_to_lobby`, `go_to_level_select`, `go_to_editor`,
-  `start_match`) + `selected_level: LevelData` (a fase que a Arena vai montar).
+- `GameManager` — estado global (enum BOOT/MENU/ONLINE/LOBBY/LEVEL_SELECT/EDITOR/
+  PLAYING/PAUSED/RESULT) + flow de cena (`go_to_lobby`, `go_to_online`,
+  `go_to_online_lobby`, `go_to_level_select`, `go_to_editor`, `go_to_level_manifest`,
+  `start_match`) + `selected_level: LevelData` (fase offline) + `get_version()`.
 - `LevelCatalog` — registro de objetos colocáveis (`type_id → ObjectDef`); a Arena
   e o editor instanciam conteúdo de fase por aqui. Novo elemento = 1 entrada.
-- `PlayerManager` — **fonte da verdade** do roster: `registered_devices`
+- `PlayerManager` — **fonte da verdade** do roster couch: `registered_devices`
   (device→slot em ordem de join), cores por slot, `join/leave` + sinais
   `player_joined/player_left`. Persiste na troca de cena.
+- `SteamManager` — inicializa a Steam (GodotSteam) e bombeia `run_callbacks` todo
+  frame; **único a tocar no singleton `Steam`**. Roda offline sem o addon
+  (`available`). `process_mode = ALWAYS`.
+- `NetworkManager` — fachada da sessão online (ver seção abaixo). `process_mode = ALWAYS`.
 
-## Preparado para online (sem implementar agora)
-- Input isolado por device → trocável por input de rede.
-- Spawn centralizado (Fase 3) → ponto único para autoridade/replicação.
-- Estado em autoloads, não espalhado nos nós.
-Quando/se formos para rede: Godot tem `MultiplayerAPI` +
-`MultiplayerSynchronizer`/`MultiplayerSpawner` nativos.
+## Multiplayer online (Steam)
+O couch local continua intacto; o online é uma camada por cima, plugada nas costuras
+que já existiam (input por device, spawn centralizado, estado nos autoloads).
+
+**Transporte:** GodotSteam **v4.20** (GDExtension em `addons/godotsteam/`) — já traz o
+próprio `SteamMultiplayerPeer` embutido (`create_host`/`create_client`). `steam_appid.txt`
+= 480 (Spacewar, appid de teste). O `SteamManager` inicializa; o `NetworkManager` cria o
+peer (via `ClassDB`, pra não travar o boot sem o addon) e o resto do jogo só fala com o
+`multiplayer` nativo + a fachada — peer trocável.
+
+**Fluxo:** MainMenu → **Online** (`OnlineMenu`: hospedar / procurar partidas por tag /
+entrar por ID) → ao hospedar/entrar/aceitar convite Steam cai numa **tela de lobby**
+(`OnlineLobby`): roster com cor por jogador, escolher cor (host concede se livre),
+expulsar (host), escolher a **fase** (host, sincronizada), convidar amigos. **Iniciar**
+(host) manda todos pra Arena; no fim (vitória/derrota) **volta pro lobby** mantendo a
+sessão/roster/cores. Convite Steam: `join_requested` (jogo rodando) + `+connect_lobby`
+na linha de comando (cold start) — ambos levam ao lobby.
+
+**Roster host-authoritative:** `NetworkManager.members` (peer_id → {name, color}) é do
+host, que faz broadcast do dict inteiro (`_sync_members`) a cada mudança; clientes só
+exibem e mandam pedidos de volta (registrar nome ao conectar, pedir cor).
+
+**Autoridade:** movimento **client-authoritative** — o dono do pinguim simula e envia
+`_remote_state` (posição/giro/velocidade, unreliable) todo frame; remotos **interpolam**
+(lerp) rumo ao último estado (mata a trepidação). O **mundo é host-authoritative**:
+cliente manda intenção, host decide e transmite. `is_multiplayer_authority()` é true pra
+todos offline, então o mesmo código roda no couch — ver `player.gd::_controls_self()`
+(offline OU autoridade), desacoplado do id do peer.
+
+**Spawn robusto (por-peer):** cada peer, ao carregar a Arena, faz ping "pronto" ao host
+(`_net_client_ready`); o host spawna aquele pinguim em **todos os já presentes** e faz
+catch-up dos anteriores pro novo — **sem espera tudo-ou-nada** (o modelo antigo travava:
+um ping perdido deixava a partida vazia). Ping perdido/precoce é reenviado a cada 0.5s
+(no `_process` do cliente) até o pinguim existir; `_net_spawn_player` é idempotente. O nó
+é nomeado com o peer_id → define a autoridade em `player.gd::_ready`. Cor vem do lobby
+(`NetworkManager.color_for_peer`).
+
+**Interações em rede:** objetos de fase ganham nome determinístico (`obj_N`) + um registro
+`nome→nó` na Arena (`_net_items` — dicionário, não `get_node`, porque item carregado sai
+do `$Interactables` pro `HoldPoint`). Pegar/soltar/entregar: cliente manda intenção
+(`player._req_interact` → host), host decide na própria cópia (posições sincronizadas) e
+transmite `_net_pickup`/`_net_drop`/`_net_deliver`. Progresso do barco sincroniza de graça
+(`submit()` é determinístico e roda em todos via `_net_deliver`). Serraria: só o host roda
+o timer e faz `host_spawn_item` (prancha com posição decidida pelo host — o jitter era
+aleatório); clientes recebem o display (label/barra) via `_net_apply_state`.
+
+**Relógio/fim (`match_ui.gd`):** host roda a contagem e envia `_net_time` (1 msg/s);
+vitória (barco completo) e derrota (tempo zera) são decididas pelo host e transmitidas por
+`_net_end` (call_local → todos). Clientes só exibem.
+
+**Pause online:** vira **menu local** — NÃO congela a árvore (isso pararia o mundo dos
+outros e o poll da Steam); só desabilita o próprio pinguim (`pause_menu.gd`). Por isso os
+autoloads de Steam são `process_mode = ALWAYS`.
+
+## Água: afogamento e respawn (player.gd)
+Quem controla o pinguim checa a cada frame se o **centro do corpo** passou abaixo da linha
+d'água (`global_position.y < water_level - DROWN_DEPTH`, ~meio corpo). Afogou: larga o que
+carregava em terra segura (o ponto de spawn), teleporta escondido pro spawn, mostra um
+`Label3D` billboard "Afogou! N" (⚠️ **não** `fixed_size` — vira gigante fixo na tela) e
+**respawna após `respawn_delay` (5s, `@export`)**. Offline o próprio player cronometra;
+online é **host-authoritative** (dono chama `Arena.report_drown` → host valida que é o dono
+daquele pinguim, larga o item no spawn, e faz `_net_die`/`_net_respawn`, timer no host). A
+Arena passa `player.set_spawn_info(spawn, water_level)` nos dois caminhos de spawn.
+
+## Fases: seleção e manifesto de build
+As fases (`LevelData` .tres) vivem em `res://levels/`, autoradas no **editor de níveis**
+— agora **só disponível rodando do editor Godot** (botão escondido na build via
+`OS.has_feature("editor")`; idem "Fases na Build"). O que entra na build e **em que ordem**
+é curado por um **manifesto** (`res://levels/manifest.tres`, `LevelManifest`: `order` +
+`disabled`), editado na tela dev-only **"Fases na Build"** (`level_manifest_editor.gd`:
+checklist + Subir/Descer + Salvar). `LevelData.shared_levels()` devolve só as habilitadas,
+em ordem, e alimenta tanto o `LevelSelect` (couch) quanto o seletor de fase do `OnlineLobby`
+(sincronizado por caminho `res://`, que toda build compartilha). Sem manifesto, tudo aparece
+habilitado (comportamento antigo).
+
+## Distribuição e CI/CD
+Versão no canto do MainMenu vem de `res://version.txt` (`GameManager.get_version()`;
+`dev` no editor, `build-N (sha)` no build; empacotado via `include_filter` no preset).
+`.github/workflows/release.yml`: cada push na `main` builda no **windows-latest**
+(`chickensoft-games/setup-godot` + templates), grava o `version.txt`, cria **GitHub
+Release** `build-<run_number>` e faz **`butler push`** pro **itch** (segredo
+`BUTLER_API_KEY`; upload diferencial, experiência "tipo Steam"). Fallback manual:
+`publish.bat` / `tools/publish_itch.ps1` (feche o editor antes — DLLs travam).
 
 ## Visual / renderização
 - **Personagem:** modelo FBX de pinguim (Kenney-style, `Assets/Visual/Characters/Penguim/`)

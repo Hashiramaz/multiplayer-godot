@@ -82,9 +82,35 @@ Produzir fases em vez de uma arena fixa. Detalhes em `docs/ARCHITECTURE.md`.
 - [ ] **VALIDAR:** montar uma fase do zero, salvar, e jogá-la pela LevelSelect
 - [ ] (depois) mais elementos no catálogo; thumbnails; salvar em `user://` no build
 
+## Fase 11 — Multiplayer online (Steam)  [x] (testado a 2 máquinas)
+Detalhes em `docs/ARCHITECTURE.md` ("Multiplayer online").
+- [x] **O1**: GodotSteam v4.20 + `SteamManager`/`NetworkManager`; hospedar/entrar por
+  lobby, browser por tag, convite (overlay + `inviteUserToLobby` + `+connect_lobby`)
+- [x] **O2**: jogadores replicados; movimento client-authoritative + interpolação;
+  autoridade pelo nome do nó (peer_id)
+- [x] **O3**: mundo host-authoritative — pegar/soltar/entregar por RPC, serraria só no
+  host, relógio + vitória/derrota em rede, pause online = menu local
+- [x] **Lobby online** (`OnlineLobby`): roster, cor por jogador, expulsar, escolher fase
+  (sincronizada), convidar; fim de partida volta ao lobby
+- [x] **Spawn robusto por-peer** (retry + catch-up + idempotente) — corrige "nenhum
+  pinguim spawnou"
+
+## Fase 12 — Água: afogamento e respawn  [x]
+- [x] Afoga com meio corpo submerso; larga item no spawn; marcador "Afogou! N";
+  respawn em 5s. Host-authoritative no online; local no couch.
+
+## Fase 13 — Curadoria de fases + editor dev-only  [x]
+- [x] Editor de níveis e "Fases na Build" só rodando do editor Godot (some na build)
+- [x] Manifesto (`res://levels/manifest.tres`) cura quais fases entram e a ordem;
+  `shared_levels()` alimenta LevelSelect + lobby online
+
+## Infra — Build/CI/distribuição  [x]
+- [x] Versão no MainMenu (`version.txt`, `build-N (sha)`)
+- [x] CI: push na `main` → build Windows → GitHub Release + `butler push` pro itch
+
 ---
 ### Status atual
-Fases 0–6 implementadas: core loop jogável de ponta a ponta — Menu → Lobby → Jogo
-(pegar toras, construir o barco contra o relógio) → vitória/derrota → resultado.
-**Próximo passo:** validar ganhar/perder no F5; afinar `match_duration`. Depois,
-Fase 7 (terreno encolhendo) e polish (áudio, arte, feedback).
+Core couch loop (Fases 0–6) + fases data-driven/editor (Fase 10) + **online co-op via
+Steam** (lobby, mundo em rede, água) + curadoria de fases, tudo shipando por CI
+(build-13+). **Próximos candidatos (a decidir):** Fase 9 (terreno encolhendo — "tempero"),
+mais profundidade de gameplay, ou um passe visual nos menus/lobby.

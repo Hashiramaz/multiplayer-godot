@@ -13,8 +13,9 @@ está fechada (candidatas no GDD); o foco atual é o protótipo de mecânicas.
 - **Linguagem:** **GDScript** (indentação com TAB, não espaços).
 - **Câmera:** **uma câmera compartilhada** (Overcooked real), perspectiva em ângulo
   alto (~50°), com zoom/pan dinâmico. NÃO é split-screen em quadrantes.
-- **Multiplayer:** **couch co-op local** agora; código estruturado para **não travar**
-  uma futura camada online (input isolado por dispositivo é a costura).
+- **Multiplayer:** **couch co-op local** + **online co-op via Steam** (implementado —
+  GodotSteam v4.20, appid de teste 480). Input isolado por dispositivo foi a costura por
+  onde a rede entrou. Detalhes em `docs/ARCHITECTURE.md` (seção "Multiplayer online").
 - **Fluxo de teste:** eu edito `.tscn`/`.gd` no disco; o usuário aperta Play na Godot.
   Sem MCP por enquanto (reavaliar depois).
 
@@ -27,10 +28,16 @@ Na Arena, **Start/Esc** = pause (Continuar / Voltar ao Lobby / Menu principal). 
 navegáveis por controle e teclado. Abrir a Arena direto cai num fallback de 1 jogador
 de teclado + ilha padrão.
 
-`MainMenu` → **Editor de Níveis** → `LevelEditor` (mouse+teclado): esculpir terreno,
-posicionar objetos/cenário/spawns, editar propriedades, salvar em `res://levels/` e
-testar. As fases salvas aparecem na `LevelSelect`. Detalhes do formato de fase e do
-editor em `docs/ARCHITECTURE.md`.
+`MainMenu` → **Online** → `OnlineMenu` (hospedar / procurar partidas / entrar por ID) →
+`OnlineLobby` (roster, cor por jogador, expulsar, host escolhe a fase, convidar) →
+**Iniciar** → `Arena` em rede; no fim volta ao lobby. Precisa da **Steam aberta**. Ver
+`docs/ARCHITECTURE.md` (seções "Multiplayer online" e "Água").
+
+`MainMenu` → **Editor de Níveis** / **Fases na Build** — botões **só aparecem rodando do
+editor Godot** (dev), não na build. O `LevelEditor` (mouse+teclado) esculpe terreno,
+posiciona objetos/spawns e salva em `res://levels/`. "Fases na Build" cura quais `.tres`
+entram na build e em que ordem (manifesto). As fases habilitadas aparecem na `LevelSelect`
+e no lobby online. Detalhes em `docs/ARCHITECTURE.md`.
 
 ## Como gerar build (Windows)
 Preset `export_presets.cfg` → **Windows Desktop**, saída em `build/windows/EscapeTheIsland.exe`
@@ -41,7 +48,8 @@ Exportar Projeto. Ou via CLI headless (com o editor fechado):
 
 ## Estrutura
 ```
-autoload/   game_manager.gd, player_manager.gd, level_catalog.gd  (singletons globais)
+autoload/   game_manager.gd, player_manager.gd, level_catalog.gd,
+            steam_manager.gd, network_manager.gd  (singletons globais)
 scenes/     arena/, player/, lobby/, menu/, levels/ (LevelSelect), editor/ (LevelEditor), props/
 scripts/    player/, camera/, arena/, input/, ui/, levels/ (LevelData/PlacedObject/ObjectDef),
             editor/ (level_editor, editor_camera), props/ (scenery)
