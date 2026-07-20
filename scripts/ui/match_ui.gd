@@ -12,6 +12,13 @@ extends CanvasLayer
 var _time_left: float = 0.0
 var _over: bool = false
 var _active: bool = false
+## O barco, guardado no configure: além do sinal de vitória, é dele que sai o estado do
+## objetivo secundário (baú embarcado) na hora de contar as estrelas.
+var _boat: Node = null
+
+## Estrelas: 3 = escapou COM o tesouro, 2 = escapou sem, 0 = derrota (o caso de 1
+## estrela ainda não tem regra definida).
+const STAR_GLYPHS := { 3: "★★★", 2: "★★☆", 1: "★☆☆" }
 
 ## Online: the host owns the clock and the ending; clients only display what it sends.
 var _online: bool = false
@@ -21,6 +28,7 @@ var _last_sent_sec: int = -1
 @onready var timer_label: Label = $HUD/TimerLabel
 @onready var result_panel: Control = $Result
 @onready var result_title: Label = $Result/VBox/Title
+@onready var result_stars: Label = $Result/VBox/Stars
 @onready var replay_button: Button = $Result/VBox/Replay
 @onready var menu_button: Button = $Result/VBox/Menu
 
@@ -47,6 +55,7 @@ func configure(level: LevelData) -> void:
 		if s.has_signal("completed"):
 			boat = s
 			break
+	_boat = boat
 	if boat != null:
 		boat.completed.connect(_on_boat_completed)
 	else:
@@ -74,14 +83,25 @@ func _on_boat_completed() -> void:
 		return
 	_end_authoritative(true)
 
-## Host (or offline) settles the outcome; online it fans out to every peer.
+## Host (or offline) settles the outcome; online it fans out to every peer. As estrelas
+## saem daqui junto com o resultado: quem tem a verdade do mundo é quem conta.
 func _end_authoritative(won: bool) -> void:
 	if _over:
 		return
+	var stars := _count_stars(won)
 	if _online:
-		_net_end.rpc(won)
+		_net_end.rpc(won, stars)
 	else:
-		_end(won)
+		_end(won, stars)
+
+## 3 se escapou com o baú a bordo, 2 se escapou sem ele, 0 na derrota (o tesouro não
+## salva quem não terminou o barco).
+func _count_stars(won: bool) -> int:
+	if not won:
+		return 0
+	if _boat != null and bool(_boat.get("treasure_stowed")):
+		return 3
+	return 2
 
 @rpc("authority", "unreliable_ordered")
 func _net_time(t: float) -> void:
@@ -89,15 +109,17 @@ func _net_time(t: float) -> void:
 	_update_timer_label()
 
 @rpc("authority", "call_local", "reliable")
-func _net_end(won: bool) -> void:
-	_end(won)
+func _net_end(won: bool, stars: int) -> void:
+	_end(won, stars)
 
-func _end(won: bool) -> void:
+func _end(won: bool, stars: int) -> void:
 	_over = true
 	GameManager.set_state(GameManager.State.RESULT)
 	for player in get_tree().get_nodes_in_group("players"):
 		(player as Node).process_mode = Node.PROCESS_MODE_DISABLED
 	result_title.text = "Vocês escaparam da ilha!" if won else "O tempo acabou... a ilha venceu."
+	result_stars.visible = stars > 0
+	result_stars.text = STAR_GLYPHS.get(stars, "")
 	# Online: return everyone to the lobby (host-driven); clients just wait.
 	if _online:
 		replay_button.text = "Voltar ao lobby" if _is_host else "Aguardando o host..."

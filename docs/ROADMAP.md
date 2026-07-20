@@ -104,6 +104,15 @@ Detalhes em `docs/ARCHITECTURE.md` ("Multiplayer online").
 - [x] Manifesto (`res://levels/manifest.tres`) cura quais fases entram e a ordem;
   `shared_levels()` alimenta LevelSelect + lobby online
 
+## Fase 14 — Tesouro: objetivo secundário + estrelas  [~] (aguardando validação)
+Detalhes em `docs/ARCHITECTURE.md` ("Tesouro"). 
+- [x] Pá (`carriable` kind "shovel") e marca de X (`dig_spot`, prop `dig_duration`) no catálogo
+- [x] Cavar segurando o botão, com barra 3D; sorteio de UMA marca certa (host no online)
+- [x] X errado = buraco + fumaça placeholder; X certo = baú (placeholder) que vai ao barco
+- [x] Estrelas no resultado: 3 com tesouro, 2 sem, 0 na derrota
+- [ ] **VALIDAR:** montar fase com pá + 3 Xs, cavar errado e certo, entregar o baú a tempo
+- [ ] (depois) arte de pá/baú/fumaça de verdade; regra da 1 estrela; som/feedback
+
 ## Infra — Build/CI/distribuição  [x]
 - [x] Versão no MainMenu (`version.txt`, `build-N (sha)`)
 - [x] CI: push na `main` → build Windows → GitHub Release + `butler push` pro itch
@@ -111,6 +120,6 @@ Detalhes em `docs/ARCHITECTURE.md` ("Multiplayer online").
 ---
 ### Status atual
 Core couch loop (Fases 0–6) + fases data-driven/editor (Fase 10) + **online co-op via
-Steam** (lobby, mundo em rede, água) + curadoria de fases, tudo shipando por CI
-(build-13+). **Próximos candidatos (a decidir):** Fase 9 (terreno encolhendo — "tempero"),
-mais profundidade de gameplay, ou um passe visual nos menus/lobby.
+Steam** (lobby, mundo em rede, água) + curadoria de fases + **tesouro/estrelas** (Fase 14),
+tudo shipando por CI (build-13+). **Próximos candidatos (a decidir):** Fase 9 (terreno
+encolhendo — "tempero"), mais profundidade de gameplay, ou um passe visual nos menus/lobby.

@@ -8,6 +8,8 @@ extends Node
 const _LOG_SCENE := preload("res://scenes/interactables/Carriable.tscn")
 const _SAWMILL_SCENE := preload("res://scenes/interactables/Sawmill.tscn")
 const _BOAT_SCENE := preload("res://scenes/interactables/BoatStation.tscn")
+const _SHOVEL_SCENE := preload("res://scenes/interactables/Shovel.tscn")
+const _DIG_SPOT_SCENE := preload("res://scenes/interactables/DigSpot.tscn")
 const _PALM_SCENE := preload("res://scenes/props/Palm.tscn")
 const _ROCK_SCENE := preload("res://scenes/props/Rock.tscn")
 
@@ -21,6 +23,12 @@ func _ready() -> void:
 	]))
 	_register(_def("boat", "Barco", "gameplay", _BOAT_SCENE, [
 		{"name": "required", "type": "int", "default": 4},
+	]))
+	_register(_def("shovel", "Pá", "gameplay", _SHOVEL_SCENE))
+	# Objetivo secundário: coloque quantas marcas quiser; a Arena sorteia UMA como a
+	# certa a cada partida (ver arena.gd::_setup_treasure).
+	_register(_def("dig_spot", "Marca de tesouro (X)", "gameplay", _DIG_SPOT_SCENE, [
+		{"name": "dig_duration", "type": "float", "default": 5.0},
 	]))
 	_register(_def("palm", "Palmeira", "scenery", _PALM_SCENE))
 	_register(_def("rock", "Pedra", "scenery", _ROCK_SCENE))

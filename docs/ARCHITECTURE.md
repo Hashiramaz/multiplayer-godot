@@ -225,6 +225,38 @@ online é **host-authoritative** (dono chama `Arena.report_drown` → host valid
 daquele pinguim, larga o item no spawn, e faz `_net_die`/`_net_respawn`, timer no host). A
 Arena passa `player.set_spawn_info(spawn, water_level)` nos dois caminhos de spawn.
 
+## Tesouro: pá, marcas de X e estrelas (objetivo secundário)
+O barco continua sendo o objetivo direto; o tesouro é o **secundário opcional**, e é o
+que separa 2 de 3 estrelas.
+
+- **Pá** (`Shovel.tscn`) — reusa `carriable.gd` com `kind = "shovel"`. Ocupa as mãos como
+  qualquer item: quem está com a pá não carrega tábua. Colocável no editor.
+- **Marca de X** (`DigSpot.tscn`, `dig_spot.gd`, grupo `"dig_spot"`) — `Area3D` com prop
+  editável `dig_duration` (5s). Coloque **quantas quiser**; a Arena sorteia **uma** como a
+  certa no `_ready` (`_setup_treasure`). Estados: intacto → cavado (buraco + `GPUParticles3D`
+  de fumaça placeholder se era a errada); cavada, sai da detecção (`monitorable = false`).
+- **Cavar = SEGURAR** — `PlayerInput.interact_down()` (estado bruto, sem edge) além do
+  `interact_just_pressed()` de sempre. Em `player.gd::_update_interaction`, estar com a pá
+  em cima de um X intacto faz o botão **cavar** em vez de pegar/soltar; soltar o botão, sair
+  de cima ou afogar **cancela e zera** o progresso. Longe de um X, o interact é o de antes.
+  Animação: o FBX não tem clipe de escavação, então `eat` roda **em loop** como placeholder
+  (`_set_dig_anim`, que devolve o clipe pra one-shot ao terminar).
+- **Quem cronometra** — a Arena, nunca o `DigSpot` (mesma razão da serraria). Offline, esta
+  máquina; online, o **host**: o dono manda intenção (`report_dig` → `_req_dig`), o host
+  mantém as sessões em `_digs` (player → {spot, t}), transmite a barra (`_net_dig_progress`,
+  unreliable) e o resultado (`_net_dig_result`, reliable). **Só o host sabe qual X é o certo**
+  — o segredo nunca trafega, então não dá pra ler a resposta na rede.
+- **Baú** (`Chest.tscn`) — não está no catálogo (não é colocável); nasce ao cavar o X certo.
+  Online vem por `host_spawn_item`, que dá nome determinístico e registra em `_net_items` —
+  com isso pegar/carregar/entregar em rede funciona de graça, e afogar carregando o baú cai
+  no mesmo caminho de "larga no spawn".
+- **Entrega e estrelas** — `boat_station.gd` aceita `kind == "treasure"` sem contar como
+  prancha (`treasure_stowed`). ⚠️ Como a **última prancha encerra a partida na hora**, o baú
+  precisa chegar **antes** dela — é a tensão de ordem da fase. No fim, `match_ui.gd` conta:
+  **3** estrelas (escapou com o baú), **2** (escapou sem), **0** na derrota. Online quem conta
+  é o host, e as estrelas viajam junto do `_net_end`. Fase sem nenhum X = sem secundário,
+  então fases antigas seguem valendo 2 estrelas.
+
 ## Fases: seleção e manifesto de build
 As fases (`LevelData` .tres) vivem em `res://levels/`, autoradas no **editor de níveis**
 — agora **só disponível rodando do editor Godot** (botão escondido na build via

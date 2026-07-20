@@ -72,6 +72,11 @@ func interact_just_pressed() -> bool:
 	_interact_prev = now
 	return just
 
+## Estado bruto do botão de interação (sem edge). Usado por ações de SEGURAR --
+## cavar com a pá. Pode ser chamado no mesmo frame que interact_just_pressed().
+func interact_down() -> bool:
+	return _interact_down()
+
 func _interact_down() -> bool:
 	match device:
 		DEVICE_NONE:

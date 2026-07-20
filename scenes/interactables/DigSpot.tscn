@@ -1,0 +1,107 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/interactables/dig_spot.gd" id="1_dig_spot"]
+
+[sub_resource type="BoxShape3D" id="spot_shape"]
+size = Vector3(1.6, 1.4, 1.6)
+
+[sub_resource type="StandardMaterial3D" id="mark_mat"]
+albedo_color = Color(0.35, 0.24, 0.16, 1)
+
+[sub_resource type="BoxMesh" id="mark_mesh"]
+size = Vector3(1.3, 0.03, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="hole_mat"]
+albedo_color = Color(0.16, 0.12, 0.09, 1)
+roughness = 1.0
+
+[sub_resource type="CylinderMesh" id="hole_mesh"]
+top_radius = 0.6
+bottom_radius = 0.45
+height = 0.12
+
+[sub_resource type="StandardMaterial3D" id="smoke_mat"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.75, 0.73, 0.7, 0.55)
+billboard_mode = 3
+
+[sub_resource type="QuadMesh" id="smoke_quad"]
+material = SubResource("smoke_mat")
+size = Vector2(0.6, 0.6)
+
+[sub_resource type="ParticleProcessMaterial" id="smoke_process"]
+emission_shape = 1
+emission_sphere_radius = 0.35
+direction = Vector3(0, 1, 0)
+spread = 25.0
+initial_velocity_min = 1.0
+initial_velocity_max = 2.0
+gravity = Vector3(0, 0.6, 0)
+scale_min = 0.6
+scale_max = 1.4
+color = Color(0.8, 0.78, 0.75, 0.6)
+
+[sub_resource type="BoxMesh" id="bar_bg_mesh"]
+size = Vector3(1.4, 0.2, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="bar_bg_mat"]
+albedo_color = Color(0.08, 0.09, 0.11, 1)
+
+[sub_resource type="BoxMesh" id="bar_fill_mesh"]
+size = Vector3(1.4, 0.14, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="bar_fill_mat"]
+albedo_color = Color(0.93, 0.76, 0.28, 1)
+emission_enabled = true
+emission = Color(0.6, 0.44, 0.1, 1)
+
+[node name="DigSpot" type="Area3D"]
+script = ExtResource("1_dig_spot")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("spot_shape")
+
+[node name="Mark" type="Node3D" parent="."]
+
+[node name="BarA" type="MeshInstance3D" parent="Mark"]
+transform = Transform3D(0.70710678, 0, -0.70710678, 0, 1, 0, 0.70710678, 0, 0.70710678, 0, 0.03, 0)
+mesh = SubResource("mark_mesh")
+surface_material_override/0 = SubResource("mark_mat")
+
+[node name="BarB" type="MeshInstance3D" parent="Mark"]
+transform = Transform3D(0.70710678, 0, 0.70710678, 0, 1, 0, -0.70710678, 0, 0.70710678, 0, 0.03, 0)
+mesh = SubResource("mark_mesh")
+surface_material_override/0 = SubResource("mark_mat")
+
+[node name="Hole" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("hole_mesh")
+surface_material_override/0 = SubResource("hole_mat")
+
+[node name="Smoke" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+emitting = false
+amount = 24
+lifetime = 1.4
+one_shot = true
+explosiveness = 0.85
+process_material = SubResource("smoke_process")
+draw_pass_1 = SubResource("smoke_quad")
+
+[node name="ProgressBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="Bg" type="MeshInstance3D" parent="ProgressBar"]
+mesh = SubResource("bar_bg_mesh")
+surface_material_override/0 = SubResource("bar_bg_mat")
+
+[node name="Fill" type="Node3D" parent="ProgressBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0.02)
+
+[node name="FillMesh" type="MeshInstance3D" parent="ProgressBar/Fill"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0)
+mesh = SubResource("bar_fill_mesh")
+surface_material_override/0 = SubResource("bar_fill_mat")

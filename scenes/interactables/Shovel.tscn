@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://b33xy8y06eolk" path="res://scripts/interactables/carriable.gd" id="1_carriable"]
+
+[sub_resource type="BoxShape3D" id="shovel_shape"]
+size = Vector3(0.3, 0.3, 1.1)
+
+[sub_resource type="StandardMaterial3D" id="handle_mat"]
+albedo_color = Color(0.62, 0.44, 0.26, 1)
+
+[sub_resource type="StandardMaterial3D" id="blade_mat"]
+albedo_color = Color(0.62, 0.64, 0.68, 1)
+metallic = 0.6
+roughness = 0.4
+
+[sub_resource type="CylinderMesh" id="handle_mesh"]
+top_radius = 0.045
+bottom_radius = 0.045
+height = 0.9
+
+[sub_resource type="BoxMesh" id="blade_mesh"]
+size = Vector3(0.26, 0.04, 0.32)
+
+[node name="Shovel" type="Area3D"]
+script = ExtResource("1_carriable")
+kind = "shovel"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+shape = SubResource("shovel_shape")
+
+[node name="Handle" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.22, 0.12)
+mesh = SubResource("handle_mesh")
+surface_material_override/0 = SubResource("handle_mat")
+
+[node name="Blade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, -0.44)
+mesh = SubResource("blade_mesh")
+surface_material_override/0 = SubResource("blade_mat")

@@ -7,6 +7,9 @@ extends Node3D
 
 @export var player_scene: PackedScene
 
+## Baú do objetivo secundário: não é colocável no editor (nasce ao cavar o X certo).
+const CHEST_SCENE_PATH := "res://scenes/interactables/Chest.tscn"
+
 @onready var terrain: Node = $Island/Terrain
 @onready var interactables: Node3D = $Interactables
 @onready var spawn_points: Node3D = $SpawnPoints
@@ -25,6 +28,10 @@ var _net_items: Dictionary = {}
 ## Counter for runtime-spawned items, so their names are identical on every peer.
 var _net_item_count: int = 0
 
+## Escavações em andamento: player (Node) -> { "spot": Node3D, "t": float }. Só existe
+## em quem cronometra (offline esta máquina, online o host).
+var _digs: Dictionary = {}
+
 func _ready() -> void:
 	var level := GameManager.selected_level
 	# Online: everyone builds the level the host picked in the lobby (resolved by its
@@ -34,6 +41,7 @@ func _ready() -> void:
 	elif level == null:
 		level = LevelData.make_default_island()
 	_build_level(level)
+	_setup_treasure()
 	_setup_outline()
 	if NetworkManager.is_online:
 		_start_net_match()
@@ -108,6 +116,155 @@ func _spawn_player(slot: int, device: int) -> void:
 	player.set_color(PlayerManager.color_for_slot(slot))
 	player.set_spawn_info(spawn.global_transform, _water_level())
 
+# --- Tesouro: sorteio + escavação ------------------------------------------
+# Objetivo secundário. A fase pode ter N marcas de "X"; UMA esconde o baú. Quem
+# cronometra a escavação e decide o resultado é offline esta máquina, online o HOST --
+# mesma regra da serraria (timer por máquina diverge) e do pickup (o mundo é do host).
+
+## Sorteia o X certo. Só quem resolve precisa saber, então online **apenas o host**
+## sorteia: se cada máquina rolasse o dado, cada uma acharia um tesouro diferente --
+## e, de quebra, o segredo nunca trafega, então não dá pra "ver" a resposta na rede.
+func _setup_treasure() -> void:
+	if NetworkManager.is_online and not multiplayer.is_server():
+		return
+	var spots := get_tree().get_nodes_in_group("dig_spot")
+	if spots.is_empty():
+		return # fase sem marcas: sem objetivo secundário (fases antigas seguem iguais)
+	var chosen := spots[randi() % spots.size()] as Node
+	chosen.set("is_treasure", true)
+
+## Chamado pelo dono do pinguim: `spot` = X que ele quer cavar, null = parou/cancelou.
+func report_dig(player: Node3D, spot: Node3D) -> void:
+	if not NetworkManager.is_online or multiplayer.is_server():
+		_apply_dig(player, spot)
+	else:
+		_req_dig.rpc_id(1, str(player.name), "" if spot == null else str(spot.name))
+
+@rpc("any_peer", "reliable")
+func _req_dig(player_name: String, spot_name: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var p := players.get_node_or_null(player_name)
+	if p == null or p.get_multiplayer_authority() != multiplayer.get_remote_sender_id():
+		return # só o dono daquele pinguim manda nele
+	_apply_dig(p, _net_items.get(spot_name))
+
+## Abre ou fecha uma sessão de escavação (host/offline).
+func _apply_dig(player: Node3D, spot: Node3D) -> void:
+	if player == null:
+		return
+	var current: Dictionary = _digs.get(player, {})
+	var current_spot: Node3D = current.get("spot")
+	if spot == null:
+		if current_spot == null:
+			return
+		_digs.erase(player)
+		if is_instance_valid(current_spot):
+			_dig_progress(str(current_spot.name), 0.0) # cancelou: barra zera
+		_dig_state(str(player.name), false)
+		return
+	if not (spot.has_method("can_dig") and spot.can_dig()):
+		return
+	if current_spot == spot:
+		return # já estava cavando esse mesmo X
+	if is_instance_valid(current_spot):
+		_dig_progress(str(current_spot.name), 0.0) # trocou de X: a barra do antigo zera
+	_digs[player] = { "spot": spot, "t": 0.0 }
+	_dig_state(str(player.name), true)
+
+func _tick_digs(delta: float) -> void:
+	for player in _digs.keys(): # keys() é uma cópia -- dá pra apagar durante o loop
+		var d: Dictionary = _digs[player]
+		var spot: Node3D = d["spot"]
+		# A sessão morre sozinha se alguém sumiu, afogou ou o X já foi cavado. (Largar
+		# a pá ou sair de cima o próprio dono avisa, via report_dig(null).)
+		if not is_instance_valid(player) or not is_instance_valid(spot) \
+				or not spot.can_dig() or player.is_dead():
+			_digs.erase(player)
+			continue
+		d["t"] += delta
+		var duration: float = maxf(spot.dig_duration, 0.01)
+		if d["t"] >= duration:
+			_digs.erase(player)
+			_resolve_dig(player, spot)
+		else:
+			_dig_progress(str(spot.name), d["t"] / duration)
+
+func _resolve_dig(player: Node3D, spot: Node3D) -> void:
+	var found: bool = spot.is_treasure
+	_dig_state(str(player.name), false)
+	_dig_result(str(spot.name), found)
+	if found:
+		_spawn_chest(spot.global_position)
+
+## O baú nasce em cima do buraco. Online ele PRECISA vir pelo host_spawn_item: é lá que
+## ganha nome determinístico e entra no _net_items, o que faz pegar/entregar em rede
+## funcionar de graça.
+func _spawn_chest(at: Vector3) -> void:
+	var pos := at + Vector3(0.0, 0.35, 0.0)
+	if NetworkManager.is_online:
+		host_spawn_item(CHEST_SCENE_PATH, pos)
+		return
+	var packed: PackedScene = load(CHEST_SCENE_PATH)
+	if packed == null:
+		push_warning("Arena: não consegui carregar o baú (%s)" % CHEST_SCENE_PATH)
+		return
+	var chest: Node3D = packed.instantiate()
+	interactables.add_child(chest)
+	chest.global_transform = Transform3D(Basis.IDENTITY, pos)
+
+# Os três abaixo aplicam o mesmo efeito em todo mundo; offline chamam direto, online o
+# host transmite -- sempre com call_local, porque a máquina do host também precisa do
+# efeito (o progresso vai unreliable, como a barra da serraria).
+
+func _dig_state(player_name: String, active: bool) -> void:
+	if NetworkManager.is_online:
+		_net_dig_state.rpc(player_name, active)
+	else:
+		_local_dig_state(player_name, active)
+
+func _dig_progress(spot_name: String, p: float) -> void:
+	if NetworkManager.is_online:
+		_net_dig_progress.rpc(spot_name, p)
+	else:
+		_local_dig_progress(spot_name, p)
+
+func _dig_result(spot_name: String, found: bool) -> void:
+	if NetworkManager.is_online:
+		_net_dig_result.rpc(spot_name, found)
+	else:
+		_local_dig_result(spot_name, found)
+
+@rpc("authority", "call_local", "reliable")
+func _net_dig_state(player_name: String, active: bool) -> void:
+	_local_dig_state(player_name, active)
+
+## call_local é obrigatório aqui: diferente da serraria (que atualiza a própria barra no
+## _process), este broadcast é o ÚNICO lugar que escreve o progresso -- sem ele o host
+## fica sem barra na própria tela.
+@rpc("authority", "call_local", "unreliable_ordered")
+func _net_dig_progress(spot_name: String, p: float) -> void:
+	_local_dig_progress(spot_name, p)
+
+@rpc("authority", "call_local", "reliable")
+func _net_dig_result(spot_name: String, found: bool) -> void:
+	_local_dig_result(spot_name, found)
+
+func _local_dig_state(player_name: String, active: bool) -> void:
+	var p := players.get_node_or_null(player_name)
+	if p != null and p.has_method("set_digging"):
+		p.set_digging(active)
+
+func _local_dig_progress(spot_name: String, p: float) -> void:
+	var spot: Node = _net_items.get(spot_name)
+	if spot != null and spot.has_method("set_progress"):
+		spot.set_progress(p)
+
+func _local_dig_result(spot_name: String, found: bool) -> void:
+	var spot: Node = _net_items.get(spot_name)
+	if spot != null and spot.has_method("resolve"):
+		spot.resolve(found)
+
 # --- Networked match: replicated players (robust, per-peer spawn) ----------
 # Movement is client-authoritative, but the host owns spawning. Each peer, once its
 # Arena scene is up, pings the host "ready"; the host spawns THAT peer's penguin on
@@ -127,6 +284,7 @@ func _process(delta: float) -> void:
 	# Client re-pings "ready" until its own penguin exists -- self-heals a lost or
 	# too-early handshake. No-op on the host and offline.
 	if not NetworkManager.is_online or multiplayer.is_server():
+		_tick_digs(delta) # quem cronometra as escavações: offline esta máquina, online o host
 		return
 	if players.has_node(str(multiplayer.get_unique_id())):
 		return

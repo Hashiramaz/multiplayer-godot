@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://b33xy8y06eolk" path="res://scripts/interactables/carriable.gd" id="1_carriable"]
+
+[sub_resource type="BoxShape3D" id="chest_shape"]
+size = Vector3(0.8, 0.6, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+albedo_color = Color(0.45, 0.28, 0.14, 1)
+
+[sub_resource type="StandardMaterial3D" id="gold_mat"]
+albedo_color = Color(0.92, 0.75, 0.24, 1)
+metallic = 0.7
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.5, 0.36, 0.06, 1)
+emission_energy_multiplier = 0.6
+
+[sub_resource type="BoxMesh" id="body_mesh"]
+size = Vector3(0.8, 0.44, 0.6)
+
+[sub_resource type="BoxMesh" id="lid_mesh"]
+size = Vector3(0.84, 0.18, 0.64)
+
+[node name="Chest" type="Area3D"]
+script = ExtResource("1_carriable")
+kind = "treasure"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("chest_shape")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, 0)
+mesh = SubResource("body_mesh")
+surface_material_override/0 = SubResource("body_mat")
+
+[node name="Lid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+mesh = SubResource("lid_mesh")
+surface_material_override/0 = SubResource("gold_mat")
+
+[node name="Label" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+pixel_size = 0.008
+billboard = 1
+text = "Tesouro!"
+font_size = 48
+outline_size = 10
+modulate = Color(1, 0.85, 0.4, 1)

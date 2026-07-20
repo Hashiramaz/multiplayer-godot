@@ -24,6 +24,9 @@ Abrir o projeto na Godot 4.7 e apertar Play (F5). Fluxo:
 `MainMenu` → **Jogar** → `Lobby` (join local: **A/Enter** entra, **B/Esc** sai,
 **Start/Espaço** começa) → `LevelSelect` (escolher a fase) → `Arena` (spawna 1
 jogador por device; movimento com analógico/WASD, **A/E** pega/entrega tora no barco).
+Objetivo secundário: com a **pá** na mão, **segurar A/E** em cima de um **X** cava (5s);
+uma das marcas esconde o **baú**, que entregue no barco antes da última prancha vale a
+**3ª estrela**. Ver `docs/ARCHITECTURE.md` (seção "Tesouro").
 Na Arena, **Start/Esc** = pause (Continuar / Voltar ao Lobby / Menu principal). Menus
 navegáveis por controle e teclado. Abrir a Arena direto cai num fallback de 1 jogador
 de teclado + ilha padrão.

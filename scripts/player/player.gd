@@ -18,6 +18,9 @@ const DROP_HEIGHT: float = 0.25 ## Rest height of a dropped item on the floor.
 const ANIM_IDLE := &"idle"
 const ANIM_WALK := &"walk"
 const ANIM_EAT := &"eat"
+## Placeholder de "cavar": o FBX não traz clipe de escavação, e 'eat' já bica pra
+## baixo. Rodado em LOOP enquanto a escavação dura (ver _set_dig_anim).
+const ANIM_DIG := ANIM_EAT
 ## Velocidade planar (m/s) a partir da qual o pinguim troca idle -> walk.
 const WALK_ANIM_SPEED: float = 0.5
 ## Crossfade entre clipes, em segundos.
@@ -31,6 +34,10 @@ var _input: PlayerInput
 var _carried: Node3D = null
 var _anim: AnimationPlayer = null
 var _playing_action: bool = false ## True enquanto uma ação one-shot (ex.: eat) toca.
+## Escavação: o X que ESTE dono pediu pra cavar (intenção) e o estado visual que a
+## Arena mandou aplicar (roda em todas as máquinas, inclusive nos pinguins remotos).
+var _dig_spot: Node3D = null
+var _digging: bool = false
 
 ## Team-color ring at the feet (built lazily in set_color).
 var _color_ring: MeshInstance3D = null
@@ -125,8 +132,7 @@ func _physics_process(delta: float) -> void:
 	_face_direction(dir, delta)
 	_update_locomotion_anim()
 
-	if _input.interact_just_pressed():
-		_interact()
+	_update_interaction()
 
 	if NetworkManager.is_online:
 		_remote_state.rpc(global_position, pivot.rotation.y, velocity)
@@ -170,6 +176,8 @@ func die() -> void:
 		return
 	_dead = true
 	_respawn_display = respawn_delay
+	if _dig_spot != null:
+		_request_dig(null) # afogou no meio da escavação: cancela a sessão
 	if _carried != null:
 		_drop_at_spawn() # couch path; online the host already dropped it
 	global_transform = _spawn_transform
@@ -298,6 +306,58 @@ func _face_direction(dir: Vector3, delta: float) -> void:
 	pivot.global_transform = gt
 
 # --- Interaction ----------------------------------------------------------
+
+## Uma decisão por frame: **segurar** o botão em cima de um X com a pá na mão CAVA;
+## qualquer outra situação mantém o pega/solta de sempre (**apertar**). Longe de um
+## X nada muda em relação a antes.
+func _update_interaction() -> void:
+	# interact_just_pressed guarda o edge internamente -- chamar exatamente 1x/frame.
+	var just := _input.interact_just_pressed()
+	var held := _input.interact_down()
+	var spot := _dig_target()
+
+	if spot != null and held:
+		if _dig_spot != spot:
+			_request_dig(spot)
+		return
+	if _dig_spot != null:
+		_request_dig(null) # soltou o botão ou saiu de cima: cancela (progresso zera)
+		return
+	if just:
+		_interact()
+
+## X ainda intacto ao alcance -- só conta se estamos carregando uma pá.
+func _dig_target() -> Node3D:
+	if _carried_kind() != "shovel":
+		return null
+	var best: Node3D = null
+	var best_dist := INF
+	for area in interaction_area.get_overlapping_areas():
+		if not area.is_in_group("dig_spot"):
+			continue
+		if not (area.has_method("can_dig") and area.can_dig()):
+			continue
+		var d := global_position.distance_to((area as Node3D).global_position)
+		if d < best_dist:
+			best_dist = d
+			best = area
+	return best
+
+## Manda a intenção pra Arena (null = parei de cavar). Quem cronometra e decide o
+## resultado é ela -- offline localmente, online o host.
+func _request_dig(spot: Node3D) -> void:
+	_dig_spot = spot
+	var arena := get_tree().current_scene
+	if arena != null and arena.has_method("report_dig"):
+		arena.report_dig(self, spot)
+
+## Aplicado em TODA máquina (a Arena transmite), pra escavação aparecer também nos
+## pinguins remotos.
+func set_digging(active: bool) -> void:
+	if _digging == active:
+		return
+	_digging = active
+	_set_dig_anim(active)
 
 ## Offline: act immediately. Online: the world is the host's call, so we either
 ## decide (we ARE the host) or just send the intent and wait for the broadcast.
@@ -450,6 +510,18 @@ func _update_locomotion_anim() -> void:
 	var want := ANIM_WALK if planar_speed > WALK_ANIM_SPEED else ANIM_IDLE
 	if _anim.has_animation(want) and _anim.current_animation != want:
 		_anim.play(want, ANIM_BLEND)
+
+## Cavar não tem clipe próprio no FBX: 'eat' entra em LOOP enquanto dura a escavação
+## e volta a ser one-shot ao terminar (senão o pickup ficaria em loop também).
+func _set_dig_anim(active: bool) -> void:
+	if _anim == null or not _anim.has_animation(ANIM_DIG):
+		return
+	_set_loop(ANIM_DIG, active)
+	_playing_action = active
+	if active:
+		_anim.play(ANIM_DIG, ANIM_BLEND)
+	elif _anim.has_animation(ANIM_IDLE):
+		_anim.play(ANIM_IDLE, ANIM_BLEND)
 
 ## Toca um clipe one-shot (ex.: eat) por cima da locomoção.
 func _play_action(anim_name: StringName) -> void:
