@@ -1,7 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dukqux3qiwg8q"]
 
-[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="PackedScene" path="res://Assets/Visual/Characters/Penguim/animal-penguin.fbx" id="2_penguin"]
+[ext_resource type="Script" uid="uid://b1xdchaoi3rsq" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://77iy1v4vnval" path="res://Assets/Visual/Characters/Penguim/animal-penguin.fbx" id="2_penguin"]
 
 [sub_resource type="CapsuleShape3D" id="shape"]
 radius = 0.4
@@ -10,23 +10,25 @@ height = 1.6
 [sub_resource type="SphereShape3D" id="interact_shape"]
 radius = 1.3
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=499698935]
 script = ExtResource("1_player")
+carry_offset = Vector3(-0.44, 0, 0.205)
+carry_rotation_degrees = Vector3(-30, 0, 0)
 
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=2028137175]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("shape")
 
-[node name="Pivot" type="Node3D" parent="."]
+[node name="Pivot" type="Node3D" parent="." unique_id=1471626973]
 
-[node name="Model" parent="Pivot" instance=ExtResource("2_penguin")]
+[node name="Model" parent="Pivot" unique_id=1954046963 instance=ExtResource("2_penguin")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)
 
-[node name="HoldPoint" type="Node3D" parent="Pivot"]
+[node name="HoldPoint" type="Node3D" parent="Pivot" unique_id=1193273969]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.55)
 
-[node name="InteractionArea" type="Area3D" parent="."]
+[node name="InteractionArea" type="Area3D" parent="." unique_id=736906629]
 
-[node name="Collision" type="CollisionShape3D" parent="InteractionArea"]
+[node name="Collision" type="CollisionShape3D" parent="InteractionArea" unique_id=1202078911]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("interact_shape")

@@ -8,6 +8,12 @@ extends CharacterBody3D
 @export var acceleration: float = 40.0
 @export var turn_speed: float = 12.0
 @export var respawn_delay: float = 5.0 ## Segundos afogado antes de voltar ao spawn.
+## Node da parte do corpo do pinguim (root/body/wing-left/wing-right/leg-front-*)
+## onde os itens carregados ficam presos, pra acompanhar a asa nas animações. Troque
+## pra "wing-left" se o item aparecer espelhado pro lado errado.
+@export var carry_part: String = "wing-right"
+@export var carry_offset: Vector3 = Vector3.ZERO ## Ajuste fino de posição do item na asa (espaço local do node).
+@export var carry_rotation_degrees: Vector3 = Vector3.ZERO ## Ajuste fino de rotação do item na asa.
 
 const GRAVITY: float = 20.0
 ## Afoga quando o centro do corpo (~origem + 0.8) passa abaixo da linha d'água.
@@ -55,7 +61,7 @@ var _death_marker: Label3D = null
 var _drown_reported: bool = false ## Online: avoids re-asking the host every frame.
 
 @onready var pivot: Node3D = $Pivot
-@onready var hold_point: Node3D = $Pivot/HoldPoint
+@onready var hold_point: Node3D = $Pivot/HoldPoint ## Fallback fixo; _setup_hold_point() troca por um ponto preso na asa quando acha o node dela.
 @onready var interaction_area: Area3D = $InteractionArea
 @onready var _collision: CollisionShape3D = $Collision
 
@@ -70,6 +76,7 @@ func _ready() -> void:
 		device = PlayerInput.DEVICE_LOCAL
 	_input = PlayerInput.new(device)
 	_setup_animations()
+	_setup_hold_point()
 
 ## True when THIS machine simulates this penguin: always offline (couch), or when
 ## we're the multiplayer authority online. Decoupled from the peer's unique id so a
@@ -496,6 +503,22 @@ func _setup_animations() -> void:
 	_anim.animation_finished.connect(_on_animation_finished)
 	if _anim.has_animation(ANIM_IDLE):
 		_anim.play(ANIM_IDLE)
+
+## Tenta prender o carregamento na asa do pinguim. O FBX não usa esqueleto/skin --
+## cada parte do corpo (root/body/wing-left/wing-right/leg-front-*) é um Node3D
+## próprio que o AnimationPlayer anima direto (transform key por node), então basta
+## ser filho do node da asa pra acompanhar a animação. Se o node não existir (reimport
+## mudou a hierarquia), mantém o HoldPoint estático já presente na cena.
+func _setup_hold_point() -> void:
+	var wing := find_child(carry_part, true, false) as Node3D
+	if wing == null:
+		push_warning("Player: node '%s' não encontrado no modelo; usando HoldPoint fixo." % carry_part)
+		return
+	var grip := Node3D.new()
+	grip.position = carry_offset
+	grip.rotation_degrees = carry_rotation_degrees
+	wing.add_child(grip)
+	hold_point = grip
 
 func _set_loop(anim_name: StringName, looped: bool) -> void:
 	if not _anim.has_animation(anim_name):

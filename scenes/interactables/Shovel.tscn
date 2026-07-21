@@ -1,40 +1,46 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cmd1kwfkvqv8c"]
 
 [ext_resource type="Script" uid="uid://b33xy8y06eolk" path="res://scripts/interactables/carriable.gd" id="1_carriable"]
+[ext_resource type="PackedScene" uid="uid://dvtxukv3260ds" path="res://Assets/Visual/Props/SM_shovel/SM_shovel.fbx" id="2_gaj8r"]
 
 [sub_resource type="BoxShape3D" id="shovel_shape"]
 size = Vector3(0.3, 0.3, 1.1)
-
-[sub_resource type="StandardMaterial3D" id="handle_mat"]
-albedo_color = Color(0.62, 0.44, 0.26, 1)
-
-[sub_resource type="StandardMaterial3D" id="blade_mat"]
-albedo_color = Color(0.62, 0.64, 0.68, 1)
-metallic = 0.6
-roughness = 0.4
 
 [sub_resource type="CylinderMesh" id="handle_mesh"]
 top_radius = 0.045
 bottom_radius = 0.045
 height = 0.9
 
+[sub_resource type="StandardMaterial3D" id="handle_mat"]
+albedo_color = Color(0.62, 0.44, 0.26, 1)
+
 [sub_resource type="BoxMesh" id="blade_mesh"]
 size = Vector3(0.26, 0.04, 0.32)
 
-[node name="Shovel" type="Area3D"]
+[sub_resource type="StandardMaterial3D" id="blade_mat"]
+albedo_color = Color(0.62, 0.64, 0.68, 1)
+metallic = 0.6
+roughness = 0.4
+
+[node name="Shovel" type="Area3D" unique_id=1804956879]
 script = ExtResource("1_carriable")
 kind = "shovel"
 
-[node name="Collision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+[node name="SM_shovel" parent="." unique_id=1286321159 instance=ExtResource("2_gaj8r")]
+transform = Transform3D(0.4817823, 0, 0, 0, -2.1059373e-08, 0.4817823, 0, -0.4817823, -2.1059373e-08, 0, 0.20177811, 0.97418857)
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1829077193]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, 9.325095e-09, 0.15, 0.41389406)
 shape = SubResource("shovel_shape")
 
-[node name="Handle" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.22, 0.12)
+[node name="Handle" type="MeshInstance3D" parent="." unique_id=27707695]
+transform = Transform3D(-1, 8.742278e-08, 0, 0, 0, -1, -8.742278e-08, -1, 0, 1.9815829e-08, 0.22, 0.29389408)
+visible = false
 mesh = SubResource("handle_mesh")
 surface_material_override/0 = SubResource("handle_mat")
 
-[node name="Blade" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, -0.44)
+[node name="Blade" type="MeshInstance3D" parent="." unique_id=1009361957]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -2.9140926e-08, 0.22, 0.8538941)
+visible = false
 mesh = SubResource("blade_mesh")
 surface_material_override/0 = SubResource("blade_mat")
