@@ -1,0 +1,72 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="1_touch"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_base"]
+bg_color = Color(1, 1, 1, 0.18)
+corner_radius_top_left = 80
+corner_radius_top_right = 80
+corner_radius_bottom_right = 80
+corner_radius_bottom_left = 80
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_knob"]
+bg_color = Color(1, 1, 1, 0.45)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(1, 1, 1, 0.3)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+
+[node name="TouchControls" type="CanvasLayer"]
+script = ExtResource("1_touch")
+
+[node name="Joystick" type="Control" parent="."]
+mouse_filter = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Base" type="Panel" parent="Joystick"]
+mouse_filter = 2
+custom_minimum_size = Vector2(160, 160)
+offset_right = 160.0
+offset_bottom = 160.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_base")
+
+[node name="Knob" type="Panel" parent="Joystick/Base"]
+mouse_filter = 2
+custom_minimum_size = Vector2(64, 64)
+offset_left = 48.0
+offset_top = 48.0
+offset_right = 112.0
+offset_bottom = 112.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_knob")
+
+[node name="Button" type="Panel" parent="."]
+mouse_filter = 2
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -160.0
+offset_right = -40.0
+offset_bottom = -40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_button")
+
+[node name="Label" type="Label" parent="Button"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+text = "AÇÃO"
+horizontal_alignment = 1
+vertical_alignment = 1

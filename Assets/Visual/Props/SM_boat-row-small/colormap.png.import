@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bapmp3ntpl1g1"
 path.s3tc="res://.godot/imported/colormap.png-0f6ab5667489e2947eaa48fb0da6bab9.s3tc.ctex"
+path.etc2="res://.godot/imported/colormap.png-0f6ab5667489e2947eaa48fb0da6bab9.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Assets/Visual/Props/SM_boat-row-small/colormap.png"
-dest_files=["res://.godot/imported/colormap.png-0f6ab5667489e2947eaa48fb0da6bab9.s3tc.ctex"]
+dest_files=["res://.godot/imported/colormap.png-0f6ab5667489e2947eaa48fb0da6bab9.s3tc.ctex", "res://.godot/imported/colormap.png-0f6ab5667489e2947eaa48fb0da6bab9.etc2.ctex"]
 
 [params]
 

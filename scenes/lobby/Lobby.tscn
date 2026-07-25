@@ -38,3 +38,11 @@ theme_override_constants/separation = 18
 layout_mode = 2
 text = "A / Enter: entrar        B / Esc: sair        Start / Espaço: começar"
 horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(240, 56)
+theme_override_font_sizes/font_size = 22
+text = "Começar"

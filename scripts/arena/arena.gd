@@ -97,11 +97,22 @@ func _spawn_players() -> void:
 		push_warning("Arena: player_scene is not assigned.")
 		return
 	var devices := PlayerManager.registered_devices
+	var has_touch_player := false
 	if devices.is_empty():
-		_spawn_player(0, PlayerInput.DEVICE_KEYBOARD)
-		return
-	for slot in devices.size():
-		_spawn_player(slot, devices[slot])
+		var device := PlayerInput.DEVICE_TOUCH if _is_touch_platform() else PlayerInput.DEVICE_KEYBOARD
+		_spawn_player(0, device)
+		has_touch_player = device == PlayerInput.DEVICE_TOUCH
+	else:
+		for slot in devices.size():
+			_spawn_player(slot, devices[slot])
+		has_touch_player = PlayerInput.DEVICE_TOUCH in devices
+	if has_touch_player:
+		add_child(preload("res://scenes/ui/TouchControls.tscn").instantiate())
+
+## True on a device with no physical keyboard/gamepad expected -- Android, or any
+## touchscreen (kept generic so a touch-first desktop build would also pick it up).
+func _is_touch_platform() -> bool:
+	return OS.get_name() == "Android" or DisplayServer.is_touchscreen_available()
 
 func _spawn_player(slot: int, device: int) -> void:
 	if spawn_points.get_child_count() == 0:

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://3a8u758fc23o"
 path.s3tc="res://.godot/imported/colormap.png-b12f8d3ffe872c0b63761acac5d4f5f9.s3tc.ctex"
+path.etc2="res://.godot/imported/colormap.png-b12f8d3ffe872c0b63761acac5d4f5f9.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://Assets/Visual/Characters/Penguim/colormap.png"
-dest_files=["res://.godot/imported/colormap.png-b12f8d3ffe872c0b63761acac5d4f5f9.s3tc.ctex"]
+dest_files=["res://.godot/imported/colormap.png-b12f8d3ffe872c0b63761acac5d4f5f9.s3tc.ctex", "res://.godot/imported/colormap.png-b12f8d3ffe872c0b63761acac5d4f5f9.etc2.ctex"]
 
 [params]
 

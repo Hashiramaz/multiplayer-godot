@@ -4,17 +4,25 @@ extends Control
 ## swallowed by the UI focus system.
 ##   Gamepad:  A = join    B = leave    Start = begin
 ##   Keyboard: Enter = join  Esc = leave  Space = begin
+##   Touch (mobile, no keyboard/gamepad): tap anywhere = join, "Começar" button = begin
 
 @onready var slots_box: HBoxContainer = $VBox/Slots
 @onready var title: Label = $VBox/Title
 @onready var instructions: Label = $VBox/Instructions
+@onready var start_button: Button = $VBox/StartButton
 
 var _slot_labels: Array[Label] = []
+var _is_touch_platform: bool = false
 
 func _ready() -> void:
 	GameManager.set_state(GameManager.State.LOBBY)
 	title.add_theme_font_size_override("font_size", 34)
 	instructions.add_theme_font_size_override("font_size", 18)
+	_is_touch_platform = OS.get_name() == "Android" or DisplayServer.is_touchscreen_available()
+	start_button.visible = _is_touch_platform
+	if _is_touch_platform:
+		instructions.text = "Toque na tela para entrar        Começar quando pronto"
+		start_button.pressed.connect(_try_start)
 	_build_slots()
 	PlayerManager.player_joined.connect(_on_roster_changed)
 	PlayerManager.player_left.connect(_on_roster_changed)
@@ -49,6 +57,8 @@ func _input(event: InputEvent) -> void:
 				PlayerManager.leave(PlayerInput.DEVICE_KEYBOARD)
 			KEY_SPACE:
 				_try_start()
+	elif _is_touch_platform and event is InputEventScreenTouch and event.pressed:
+		PlayerManager.join(PlayerInput.DEVICE_TOUCH)
 
 func _try_start() -> void:
 	if PlayerManager.slot_count() > 0:
@@ -71,4 +81,6 @@ func _refresh() -> void:
 func _device_name(device: int) -> String:
 	if device == PlayerInput.DEVICE_KEYBOARD:
 		return "Teclado"
+	if device == PlayerInput.DEVICE_TOUCH:
+		return "Touch"
 	return "Controle %d" % device

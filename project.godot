@@ -22,6 +22,7 @@ PlayerManager="*res://autoload/player_manager.gd"
 LevelCatalog="*res://autoload/level_catalog.gd"
 SteamManager="*res://autoload/steam_manager.gd"
 NetworkManager="*res://autoload/network_manager.gd"
+TouchInput="*res://autoload/touch_input.gd"
 
 [display]
 
@@ -35,6 +36,7 @@ window/stretch/aspect="expand"
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true
 
 [steam]
 

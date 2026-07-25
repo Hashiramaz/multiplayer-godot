@@ -6,6 +6,7 @@ extends RefCounted
 ##   device >= 0             -> that specific gamepad
 ##   device == -1 (KEYBOARD) -> keyboard (WASD / arrows)
 ##   device == -2 (LOCAL)    -> keyboard + gamepad 0 merged (online: 1 player/machine)
+##   device == -3 (TOUCH)    -> on-screen virtual joystick/button (mobile)
 ##   device == -99 (NONE)    -> reads nothing (stationary / not-yet-assigned)
 ##
 ## Online layer: each machine's own player uses DEVICE_LOCAL; remote players are
@@ -13,6 +14,7 @@ extends RefCounted
 
 const DEVICE_KEYBOARD: int = -1
 const DEVICE_LOCAL: int = -2
+const DEVICE_TOUCH: int = -3
 const DEVICE_NONE: int = -99
 const DEADZONE: float = 0.2
 
@@ -33,6 +35,8 @@ func get_move() -> Vector2:
 			return _keyboard_vector()
 		DEVICE_LOCAL:
 			return _local_vector()
+		DEVICE_TOUCH:
+			return TouchInput.move
 		_:
 			return _pad_vector(device)
 
@@ -86,5 +90,7 @@ func _interact_down() -> bool:
 		DEVICE_LOCAL:
 			return Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE) \
 				or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
+		DEVICE_TOUCH:
+			return TouchInput.interact_down
 		_:
 			return Input.is_joy_button_pressed(device, JOY_BUTTON_A)
